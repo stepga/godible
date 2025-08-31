@@ -9,12 +9,12 @@ import (
 	host "periph.io/x/host/v3"
 )
 
-type pinLevelMessage struct {
+type PinLevelMessage struct {
 	State gpio.Level
 	Reset gpio.Level
 }
 
-func setupGPIOInput(pinName string, levelChan chan pinLevelMessage) (gpio.PinIO, error) {
+func SetupGPIOInput(pinName string, levelChan chan PinLevelMessage) (gpio.PinIO, error) {
 	log.Printf("Loading periph.io drivers")
 	if _, err := host.Init(); err != nil {
 		return nil, err
@@ -41,36 +41,10 @@ func setupGPIOInput(pinName string, levelChan chan pinLevelMessage) (gpio.PinIO,
 			log.Printf("level: %v", currentLevel)
 
 			if currentLevel != lastLevel {
-				levelChan <- pinLevelMessage{State: currentLevel, Reset: !currentLevel}
+				levelChan <- PinLevelMessage{State: currentLevel, Reset: !currentLevel}
 				lastLevel = currentLevel
 			}
 		}
 	}()
 	return p, nil
-}
-
-func main() {
-	// Channel for communicating Pin levels
-	levelChan := make(chan pinLevelMessage)
-
-	p, err := setupGPIOInput("GPIO24", levelChan)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Main loop, act on level changes
-	for {
-		select {
-		case msg := <-levelChan:
-			if msg.State {
-				log.Printf("Pin %s is High, processing high state tasks", p.Name())
-				// Process high state tasks
-			} else if msg.Reset {
-				log.Printf("Pin %s is Low, resetting to wait for high state", p.Name())
-				// Process resetting logic, if any
-			}
-		default:
-			// Any other ongoing tasks
-		}
-	}
 }
