@@ -1,50 +1,62 @@
 package godible
 
 import (
-	"log"
-	"time"
+	"fmt"
 
 	"periph.io/x/conn/v3/gpio"
 	"periph.io/x/conn/v3/gpio/gpioreg"
+	"periph.io/x/conn/v3/pin"
 	host "periph.io/x/host/v3"
 )
 
-type PinLevelMessage struct {
-	State gpio.Level
-	Reset gpio.Level
+type pinfunction func()
+
+func PinCallFunction(pinIO gpio.PinIO) error {
+	if pinIO == nil {
+		return fmt.Errorf("gpio: invalid argument (PinFunction): nil")
+	}
+	pinIOFunc, ok := pinIO.(pin.PinFunc)
+	if !ok {
+		return fmt.Errorf("gpio: pin '%s' does not have a function", pinIO.Name())
+	}
+	pinIOFunc.Func()
+	return nil
 }
 
-func SetupGPIOInput(pinName string, levelChan chan PinLevelMessage) (gpio.PinIO, error) {
-	log.Printf("Loading periph.io drivers")
-	if _, err := host.Init(); err != nil {
+// InitHostDrivers initialises all the relevant host drivers.
+//
+// It is safe to call this function multiple times, as the underlying function
+// saves the previous returned state on later calls.
+func InitHostDrivers() error {
+	_, err := host.Init()
+	return err
+}
+
+func SetupPinByGPIOName(gpioName string) (gpio.PinIO, error) {
+	if err := InitHostDrivers(); err != nil {
 		return nil, err
 	}
 
-	// Find Pin by name
-	p := gpioreg.ByName(pinName)
+	pinIO := gpioreg.ByName(gpioName)
+	if pinIO == nil {
+		return nil, fmt.Errorf("gpio: GPIO pin for '%s' not found", gpioName)
+	}
 
-	// Configure Pin for input, configure pull as needed
-	// Edge mode is currently not supported
-	if err := p.In(gpio.PullUp, gpio.NoEdge); err != nil {
+	err := pinIO.In(gpio.PullDown, gpio.RisingEdge)
+	if err != nil {
 		return nil, err
 	}
 
-	// Setup Input signalling
-	go func() {
-		lastLevel := p.Read()
-		// How often to poll levels, 100-150ms is fairly responsive unless
-		// button presses are very fast.
-		// Shortening the polling interval <100ms significantly increases
-		// CPU load.
-		for range time.Tick(100 * time.Millisecond) {
-			currentLevel := p.Read()
-			log.Printf("level: %v", currentLevel)
+	return pinIO, nil
+}
 
-			if currentLevel != lastLevel {
-				levelChan <- PinLevelMessage{State: currentLevel, Reset: !currentLevel}
-				lastLevel = currentLevel
-			}
+func PinEdgeCallback(pinIO gpio.PinIO, fn pinfunction) {
+	for {
+		edgeDetected := pinIO.WaitForEdge(0)
+		if !edgeDetected {
+			fmt.Println("gpio (PinEdgeCallback): this should not have happen ...")
+			continue
 		}
-	}()
-	return p, nil
+		fn()
+	}
 }
