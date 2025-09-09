@@ -1,3 +1,5 @@
+github.com/anisse/alsa v0.0.0-20190130210209-592d9b53603e h1:o1IEebRSxT85W8oR8CrHGpCUNKFR/EqaZEiBHrH/EcY=
+github.com/anisse/alsa v0.0.0-20190130210209-592d9b53603e/go.mod h1:/kjT5Fn1GSvpaNUuDKjRU/+/xPtiSojj5eu5k+6vU7Y=
 github.com/jonboulle/clockwork v0.4.0 h1:p4Cf1aMWXnXAUh8lVfewRBx1zaTSYKrKMF2g3ST4RZ4=
 github.com/jonboulle/clockwork v0.4.0/go.mod h1:xgRqUGwRcjKCO1vbZUEtSLrqKoPSsUpK7fnezOII0kc=
 periph.io/x/conn/v3 v3.7.2 h1:qt9dE6XGP5ljbFnCKRJ9OOCoiOyBGlw7JZgoi72zZ1s=
