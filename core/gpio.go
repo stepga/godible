@@ -11,7 +11,7 @@ import (
 
 type pinfunction func()
 
-func PinCallFunction(pinIO gpio.PinIO) error {
+func PinCurrentFunction(pinIO gpio.PinIO) error {
 	if pinIO == nil {
 		return fmt.Errorf("gpio: invalid argument (PinFunction): nil")
 	}

@@ -19,7 +19,7 @@ func main() {
 			continue
 		}
 
-		err = godible_core.PinCallFunction(pinIO)
+		err = godible_core.PinCurrentFunction(pinIO)
 		if err != nil {
 			log.Printf("godible: gpio %s may not work, querying its function failed: %s", gpioName, err)
 		}
