@@ -11,7 +11,7 @@ import (
 
 type pinfunction func()
 
-func PinCurrentFunction(pinIO gpio.PinIO) error {
+func GetPinCurrentFunction(pinIO gpio.PinIO) error {
 	if pinIO == nil {
 		return fmt.Errorf("gpio: invalid argument (PinFunction): nil")
 	}
@@ -50,7 +50,7 @@ func SetupPinByGPIOName(gpioName string) (gpio.PinIO, error) {
 	return pinIO, nil
 }
 
-func PinEdgeCallback(pinIO gpio.PinIO, fn pinfunction) {
+func CallFuncOnPinEdge(pinIO gpio.PinIO, fn pinfunction) {
 	for {
 		edgeDetected := pinIO.WaitForEdge(0)
 		if !edgeDetected {
