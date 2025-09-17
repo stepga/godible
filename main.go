@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"time"
 
 	"github.com/anisse/alsa"
 	. "github.com/stepga/godible/internal"
@@ -75,7 +74,6 @@ func main() {
 
 	// TODO: usb webcam module && qr code recognition
 
-	for {
-		time.Sleep(5 * time.Second)
-	}
+	// block main goroutine forever
+	<-make(chan struct{})
 }
