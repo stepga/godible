@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/anisse/alsa"
 )
@@ -20,22 +21,24 @@ type AudioMedium struct {
 	Checksum []byte // hash#Hash.Sum
 }
 
+// TODO: quit chan/context/sync-object?
 type Player struct {
-	player  *alsa.Player
-	current *AudioMedium
-	queue   chan *AudioMedium
-	playing bool
-	list    []*AudioMedium
+	alsaplayer *alsa.Player
+	current    *AudioMedium
+	queue      chan *AudioMedium
+	playing    bool
+	// TODO: replace array with container/list
+	list []*AudioMedium
 }
 
 func fileHash(filepath string) ([]byte, error) {
-	f, err := os.Open(filepath)
+	file, err := os.Open(filepath)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer file.Close()
 	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
+	if _, err := io.Copy(h, file); err != nil {
 		return nil, err
 	}
 	return h.Sum(nil), nil
@@ -46,11 +49,11 @@ func GatherAudioMediumsDir(root string) ([]*AudioMedium, error) {
 	var ret []*AudioMedium
 
 	// check if file exists or other error occurs
-	basePath_fileinfo, err := os.Stat(root)
+	root_fileinfo, err := os.Stat(root)
 	if err != nil {
 		return ret, err
 	}
-	if !basePath_fileinfo.Mode().IsDir() {
+	if !root_fileinfo.Mode().IsDir() {
 		return ret, fmt.Errorf("player: given path is not a directory: %s", root)
 	}
 
@@ -96,9 +99,13 @@ func NewPlayer() (*Player, error) {
 		return nil, err
 	}
 	return &Player{
-		player: alsaPlayer,
-		list:   list,
+		alsaplayer: alsaPlayer,
+		list:       list,
 	}, nil
+}
+
+func (player *Player) Close() error {
+	return player.alsaplayer.Close()
 }
 
 func (player *Player) Next() (*AudioMedium, error) {
@@ -111,12 +118,58 @@ func (player *Player) Previous() (*AudioMedium, error) {
 	return nil, nil
 }
 
+func (player *Player) setCurrent() {
+	select {
+	case am := <-player.queue:
+		player.current = am
+	default:
+		if len(player.list) != 0 {
+			player.current = player.list[0]
+		}
+	}
+}
+
+func (player *Player) getCurrent() *AudioMedium {
+	if player.current != nil {
+		player.setCurrent()
+	}
+	return player.current
+}
+
+func readFile(path string) ([]byte, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	return io.ReadAll(file)
+}
+
 func (player *Player) Play() {
-	// TODO: implement me
+	for {
+		current := player.getCurrent()
+		if current == nil {
+			// TODO: log that no current AudioMedium could be determined
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		// TODO: handle offset (modify readFile to readAudioMedium)
+		data, err := readFile(current.Path)
+		if err != nil {
+			panic(err.Error())
+		}
+		_, err = player.alsaplayer.Write(data)
+		if err != nil {
+			panic(err.Error())
+		}
+	}
 }
 
 func (player *Player) Pause() {
-	// TODO: implement me
+	// TODO: implement me:
+	// - set player.current.offset
+	// - toggle player.playing
 }
 
 func (player *Player) TogglePlayPause() {

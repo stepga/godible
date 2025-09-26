@@ -3,11 +3,9 @@ package main
 // test files https://mauvecloud.net/sounds/
 
 import (
-	"io"
 	"log"
 	"os"
 
-	"github.com/anisse/alsa"
 	. "github.com/stepga/godible/internal"
 )
 
@@ -45,25 +43,13 @@ func main() {
 	//   - next song
 	//   - state (pause/play)
 
-	p, err := alsa.NewPlayer(44100, 2, 2, 4096)
+	player, err := NewPlayer()
 	if err != nil {
-		panic(err.Error())
+		log.Fatalf("godible: initializing player failed: %s", err)
 	}
-	defer p.Close()
+	defer player.Close()
 
-	f, err := os.Open(os.Args[1])
-	if err != nil {
-		panic(err.Error())
-	}
-	defer f.Close()
-	b, err := io.ReadAll(f)
-	if err != nil {
-		panic(err.Error())
-	}
-	_, err = p.Write(b)
-	if err != nil {
-		panic(err.Error())
-	}
+	player.Play()
 
 	// TODO: web interface
 	//   - upload songs
