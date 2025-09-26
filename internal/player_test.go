@@ -2,8 +2,10 @@ package godible
 
 import (
 	"bytes"
+	"container/list"
 	"crypto/sha256"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -14,21 +16,28 @@ func closeFile(t *testing.T, file *os.File) {
 	}
 }
 
-func doTestFileList(t *testing.T, baseDir string) []*AudioMedium {
-	list, err := GatherAudioMediumsDir(baseDir)
+func doTestFileList(t *testing.T, audioMediumList *list.List, root string) {
+	err := GatherAudioMediumsDir(audioMediumList, root)
 	if err != nil {
-		t.Errorf("dir %s; unexpected error: %s", baseDir, err)
+		t.Errorf("dir %s; unexpected error: %s", root, err)
 	}
-	return list
 }
 
-func listContainsPath(list []*AudioMedium, path string) bool {
-	for _, audioMedium := range list {
-		if audioMedium.Path == path {
+func listContainsPath(t *testing.T, fileList *list.List, path string) bool {
+	element := fileList.Front()
+	for {
+		if element == nil {
+			return false
+		}
+		am, ok := element.Value.(*AudioMedium)
+		if !ok {
+			t.Fatalf("expected *AudioMedium; is %+v", element.Value)
+		}
+		if am.Path == path {
 			return true
 		}
+		element = element.Next()
 	}
-	return false
 }
 
 func TestFileList(t *testing.T) {
@@ -59,12 +68,13 @@ func TestFileList(t *testing.T) {
 		}
 	}
 
-	list := doTestFileList(t, tmpBaseDir)
-	if len(list) != len(regFiles) {
-		t.Errorf("expected list with %d entries; got list with %d entries", len(list), len(regFiles))
+	fileList := list.New()
+	doTestFileList(t, fileList, tmpBaseDir)
+	if fileList.Len() != len(regFiles) {
+		t.Errorf("expected list with %d entries; got list with %d entries", fileList.Len(), len(regFiles))
 	}
 	for _, file := range regFiles {
-		if !listContainsPath(list, tmpBaseDir+file) {
+		if !listContainsPath(t, fileList, tmpBaseDir+file) {
 			t.Errorf("list did not contain: %s", tmpBaseDir+file)
 		}
 	}
@@ -81,9 +91,11 @@ func TestFileHashes(t *testing.T) {
 	hash.Write(content)
 	expectedChecksum := hash.Sum(nil)
 
-	list := doTestFileList(t, tmpBaseDir)
-	if !bytes.Equal(expectedChecksum, list[0].Checksum) {
-		t.Errorf("expected checksum to be %x, is %x", expectedChecksum, list[0].Checksum)
+	fileList := list.New()
+	doTestFileList(t, fileList, tmpBaseDir)
+	am, _ := fileList.Front().Value.(*AudioMedium)
+	if !bytes.Equal(expectedChecksum, am.Checksum) {
+		t.Errorf("expected checksum to be %x, is %x", expectedChecksum, am.Checksum)
 	}
 }
 
@@ -97,19 +109,19 @@ func TestExoticPaths(t *testing.T) {
 	}
 
 	content := []byte("hello\n")
-	err = os.WriteFile(tmpBaseDir+path_str+"/file", content, 0644)
+	filePath := tmpBaseDir + path_str + "/file"
+	err = os.WriteFile(filePath, content, 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
-	hash := sha256.New()
-	hash.Write(content)
-	expectedChecksum := hash.Sum(nil)
 
-	list := doTestFileList(t, tmpBaseDir)
-	if len(list) != 1 {
+	fileList := list.New()
+	doTestFileList(t, fileList, tmpBaseDir)
+	if fileList.Len() != 1 {
 		t.Errorf("expected a file in gathered list")
 	}
-	if !bytes.Equal(expectedChecksum, list[0].Checksum) {
-		t.Errorf("expected checksum to be %x, is %x", expectedChecksum, list[0].Checksum)
+	am, _ := fileList.Front().Value.(*AudioMedium)
+	if filepath.Clean(am.Path) != filepath.Clean(filePath) {
+		t.Errorf("expected Path to be %s, is %s", filePath, am.Path)
 	}
 }

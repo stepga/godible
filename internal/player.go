@@ -1,6 +1,7 @@
 package godible
 
 import (
+	"container/list"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -14,21 +15,31 @@ const (
 	DATADIR = "/perm/godible-data/"
 )
 
+// TODO: add reading command via unix socket for debugging
+
 type AudioMedium struct {
-	Path     string
-	offset   int64  // io#Seeker.Seek
+	Path string
+	// TODO: implement pause/play logic with offset
+	offset int64 // io#Seeker.Seek
+	// TODO: implement size
 	size     int64  // fs#FileInfo.Size
 	Checksum []byte // hash#Hash.Sum
 }
 
 // TODO: quit chan/context/sync-object?
 type Player struct {
-	alsaplayer *alsa.Player
-	current    *AudioMedium
-	queue      chan *AudioMedium
-	playing    bool
-	// TODO: replace array with container/list
-	list []*AudioMedium
+	alsaplayer      *alsa.Player
+	current         *list.Element
+	queue           chan *list.Element
+	playing         bool
+	audioMediumList *list.List
+}
+
+func (am *AudioMedium) String() string {
+	if am == nil {
+		return "nil"
+	}
+	return fmt.Sprintf("{Path: %s, offset: %d, size: %d, Checksum: %x}", am.Path, am.offset, am.size, am.Checksum)
 }
 
 func fileHash(filepath string) ([]byte, error) {
@@ -45,62 +56,63 @@ func fileHash(filepath string) ([]byte, error) {
 }
 
 // TODO: implement recursive file/dir watch,, e.g via https://github.com/fsnotify/fsnotify/issues/18#issuecomment-3109424560
-func GatherAudioMediumsDir(root string) ([]*AudioMedium, error) {
-	var ret []*AudioMedium
-
-	// check if file exists or other error occurs
+func GatherAudioMediumsDir(audioMediumList *list.List, root string) error {
+	if audioMediumList == nil {
+		audioMediumList = list.New()
+	}
 	root_fileinfo, err := os.Stat(root)
 	if err != nil {
-		return ret, err
+		return err
 	}
 	if !root_fileinfo.Mode().IsDir() {
-		return ret, fmt.Errorf("player: given path is not a directory: %s", root)
+		return fmt.Errorf("player: given path is not a directory: %s", root)
 	}
-
 	entries, err := os.ReadDir(root)
 	if err != nil {
-		return ret, err
+		return err
 	}
+
 	for _, entry := range entries {
 		entry_path := root + "/" + entry.Name()
 		if entry.IsDir() {
-			nestedFiles, err := GatherAudioMediumsDir(entry_path)
+			err := GatherAudioMediumsDir(audioMediumList, entry_path)
 			if err != nil {
+				panic(err)
 				// TODO: handle graciously
-				continue
 			}
-			ret = append(ret, nestedFiles...)
 			continue
 		}
-
 		if entry.Type().IsRegular() {
 			checksum, err := fileHash(entry_path)
 			if err != nil {
+				panic(err)
 				// TODO: handle graciously
-				continue
 			}
 			audioMedium := &AudioMedium{
 				Path:     entry_path,
 				Checksum: checksum,
 			}
-			ret = append(ret, audioMedium)
+			audioMediumList.PushBack(audioMedium)
 		}
 	}
-	return ret, nil
+	return nil
 }
 
 func NewPlayer() (*Player, error) {
+	// TODO: both 44100 Hz and 48000 Hz are supported. re-init new player if AudioMedium requires it ...
 	alsaPlayer, err := alsa.NewPlayer(44100, 2, 2, 4096)
 	if err != nil {
 		return nil, err
 	}
-	list, err := GatherAudioMediumsDir(DATADIR)
+	audioMediumList := list.New()
+	err = GatherAudioMediumsDir(audioMediumList, DATADIR)
 	if err != nil {
 		return nil, err
 	}
+	// TODO: log audioMediumList.Len()
 	return &Player{
-		alsaplayer: alsaPlayer,
-		list:       list,
+		alsaplayer:      alsaPlayer,
+		audioMediumList: audioMediumList,
 	}, nil
 }
 
@@ -119,21 +131,27 @@ func (player *Player) Previous() (*AudioMedium, error) {
 }
 
 func (player *Player) setCurrent() {
+	if player.current != nil {
+		return
+	}
+
 	select {
 	case am := <-player.queue:
 		player.current = am
 	default:
-		if len(player.list) != 0 {
-			player.current = player.list[0]
-		}
+		player.current = player.audioMediumList.Front()
 	}
 }
 
-func (player *Player) getCurrent() *AudioMedium {
+func (player *Player) getCurrentAudioMedium() *AudioMedium {
+	player.setCurrent()
 	if player.current != nil {
-		player.setCurrent()
+		am, ok := player.current.Value.(*AudioMedium)
+		if ok {
+			return am
+		}
 	}
-	return player.current
+	return nil
 }
 
 func readFile(path string) ([]byte, error) {
@@ -147,13 +165,12 @@ func readFile(path string) ([]byte, error) {
 
 func (player *Player) Play() {
 	for {
-		current := player.getCurrent()
+		current := player.getCurrentAudioMedium()
 		if current == nil {
 			// TODO: log that no current AudioMedium could be determined
 			time.Sleep(1 * time.Second)
 			continue
 		}
-
 		// TODO: handle offset (modify readFile to readAudioMedium)
 		data, err := readFile(current.Path)
 		if err != nil {
@@ -163,6 +180,7 @@ func (player *Player) Play() {
 		if err != nil {
 			panic(err.Error())
 		}
+		player.current = player.current.Next()
 	}
 }
 
