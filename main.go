@@ -3,38 +3,13 @@ package main
 // test files https://mauvecloud.net/sounds/
 
 import (
-	"log"
+	"log/slog"
 	"os"
 
 	. "github.com/stepga/godible/internal"
 )
 
 func main() {
-	// TODO: wrap pin setup & pin-func-register-stuff up into one single func
-	gpioSetupFailed := false
-	gpioNames := []string{"GPIO4", "GPIO23", "GPIO24"}
-	for _, gpioName := range gpioNames {
-		pinIO, err := SetupPinByGPIOName(gpioName)
-		if err != nil {
-			log.Printf("godible: setup %s failed: %s", gpioName, err)
-			gpioSetupFailed = true
-			continue
-		}
-
-		err = GetPinCurrentFunction(pinIO)
-		if err != nil {
-			log.Printf("godible: gpio %s may not work, querying its function failed: %s", gpioName, err)
-		}
-
-		// TODO: register dedicated player (play/pause next/previous functions)
-		// TODO: distinguish short vs long button press
-		go CallFuncOnPinEdge(pinIO, func() {
-			log.Printf("triggered %s\n", gpioName)
-		})
-	}
-	if gpioSetupFailed {
-		os.Exit(1)
-	}
 
 	// TODO: setup some sort of singleton player state instance
 	//   - current song
@@ -43,13 +18,41 @@ func main() {
 	//   - next song
 	//   - state (pause/play)
 
+	SetDefaultLogger(slog.LevelDebug)
+
 	player, err := NewPlayer()
 	if err != nil {
-		log.Fatalf("godible: initializing player failed: %s", err)
+		slog.Error("NewPlayer: initializing player failed", "err", err)
+		os.Exit(1)
 	}
-	defer player.Close()
+	go player.Run()
 
-	player.Play()
+	// TODO: wrap pin setup & pin-func-register-stuff up into one single func
+	gpioSetupFailed := false
+	gpioNames := []string{"GPIO4", "GPIO23", "GPIO24"}
+	for _, gpioName := range gpioNames {
+		pinIO, err := SetupPinByGPIOName(gpioName)
+		if err != nil {
+			slog.Error("SetupPinByGPIOName failed", "gpioName", gpioName, "err", err)
+			gpioSetupFailed = true
+			continue
+		}
+
+		err = GetPinCurrentFunction(pinIO)
+		if err != nil {
+			slog.Error("GetPinCurrentFunction failed, respective gpio may not work", "gpioName", gpioName, "err", err)
+		}
+
+		// TODO: register dedicated player (play/pause next/previous functions)
+		// TODO: distinguish short vs long button press
+		go CallFuncOnPinEdge(pinIO, func() {
+			slog.Debug("CallFuncOnPinEdge triggered", "gpioName", gpioName)
+			player.Stop()
+		})
+	}
+	if gpioSetupFailed {
+		os.Exit(1)
+	}
 
 	// TODO: web interface
 	//   - upload songs
