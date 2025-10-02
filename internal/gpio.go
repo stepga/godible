@@ -11,7 +11,16 @@ import (
 
 type pinfunction func()
 
-func GetPinCurrentFunction(pinIO gpio.PinIO) error {
+// initHostDrivers initialises all the relevant host drivers.
+//
+// It is safe to call this function multiple times, as the underlying function
+// saves the previous returned state on later calls.
+func initHostDrivers() error {
+	_, err := host.Init()
+	return err
+}
+
+func getPinCurrentFunction(pinIO gpio.PinIO) error {
 	if pinIO == nil {
 		return fmt.Errorf("gpio: invalid argument (PinFunction): nil")
 	}
@@ -23,17 +32,8 @@ func GetPinCurrentFunction(pinIO gpio.PinIO) error {
 	return nil
 }
 
-// InitHostDrivers initialises all the relevant host drivers.
-//
-// It is safe to call this function multiple times, as the underlying function
-// saves the previous returned state on later calls.
-func InitHostDrivers() error {
-	_, err := host.Init()
-	return err
-}
-
-func SetupPinByGPIOName(gpioName string) (gpio.PinIO, error) {
-	if err := InitHostDrivers(); err != nil {
+func setupPinByGPIOName(gpioName string) (gpio.PinIO, error) {
+	if err := initHostDrivers(); err != nil {
 		return nil, err
 	}
 
@@ -50,9 +50,9 @@ func SetupPinByGPIOName(gpioName string) (gpio.PinIO, error) {
 	return pinIO, nil
 }
 
-func CallFuncOnPinEdge(pinIO gpio.PinIO, fn pinfunction) {
+func callFuncOnPinEdge(pinIO gpio.PinIO, fn pinfunction) {
 	for {
-		// TODO: also possible to detect long press
+		// TODO: detect long press
 		// - save pre state
 		// - on edge:
 		//   - loop (couple of ms sleep)
@@ -65,4 +65,21 @@ func CallFuncOnPinEdge(pinIO gpio.PinIO, fn pinfunction) {
 		}
 		fn()
 	}
+}
+
+func RegisterPinFunc(gpioName string, fn pinfunction) error {
+	pinIO, err := setupPinByGPIOName(gpioName)
+	if err != nil {
+		return err
+	}
+
+	err = getPinCurrentFunction(pinIO)
+	if err != nil {
+		return fmt.Errorf("gpio: could not gather current function for pin '%s'", pinIO.Name())
+	}
+
+	go callFuncOnPinEdge(pinIO, func() {
+		fn()
+	})
+	return nil
 }

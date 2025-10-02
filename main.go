@@ -10,14 +10,6 @@ import (
 )
 
 func main() {
-
-	// TODO: setup some sort of singleton player state instance
-	//   - current song
-	//   - offset/position
-	//   - previous song
-	//   - next song
-	//   - state (pause/play)
-
 	SetDefaultLogger(slog.LevelDebug)
 
 	player, err := NewPlayer()
@@ -27,30 +19,19 @@ func main() {
 	}
 	go player.Run()
 
-	// TODO: wrap pin setup & pin-func-register-stuff up into one single func
-	gpioSetupFailed := false
-	gpioNames := []string{"GPIO4", "GPIO23", "GPIO24"}
-	for _, gpioName := range gpioNames {
-		pinIO, err := SetupPinByGPIOName(gpioName)
-		if err != nil {
-			slog.Error("SetupPinByGPIOName failed", "gpioName", gpioName, "err", err)
-			gpioSetupFailed = true
-			continue
-		}
-
-		err = GetPinCurrentFunction(pinIO)
-		if err != nil {
-			slog.Error("GetPinCurrentFunction failed, respective gpio may not work", "gpioName", gpioName, "err", err)
-		}
-
-		// TODO: register dedicated player (play/pause next/previous functions)
-		// TODO: distinguish short vs long button press
-		go CallFuncOnPinEdge(pinIO, func() {
-			slog.Debug("CallFuncOnPinEdge triggered", "gpioName", gpioName)
-			player.Stop()
-		})
+	err = RegisterPinFunc("GPIO4", player.Stop)
+	if err != nil {
+		slog.Error("RegisterPinFunc failed", "err", err)
+		os.Exit(1)
 	}
-	if gpioSetupFailed {
+	err = RegisterPinFunc("GPIO23", player.Stop)
+	if err != nil {
+		slog.Error("RegisterPinFunc failed", "err", err)
+		os.Exit(1)
+	}
+	err = RegisterPinFunc("GPIO24", player.Stop)
+	if err != nil {
+		slog.Error("RegisterPinFunc failed", "err", err)
 		os.Exit(1)
 	}
 

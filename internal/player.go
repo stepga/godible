@@ -33,7 +33,7 @@ type Player struct {
 	queue           chan *list.Element
 	playing         bool
 	audioMediumList *list.List
-	stop            context.CancelFunc
+	stopfunc        context.CancelFunc
 }
 
 func fileHash(filepath string) ([]byte, error) {
@@ -217,17 +217,17 @@ func (player *Player) Run() {
 		current, _ := player.current.Value.(*AudioMedium)
 		slog.Info("Play: determined current title", "current", current.path)
 		ctx, stop := context.WithCancel(context.Background())
-		player.stop = stop
+		player.stopfunc = stop
 		player.Play(ctx)
-		player.stop = nil
+		player.stopfunc = nil
 		player.current = player.current.Next()
 	}
 }
 
 // FIXME: Stop() is currently more like a "Next" function
 func (player *Player) Stop() {
-	if player.stop != nil {
-		player.stop()
+	if player.stopfunc != nil {
+		player.stopfunc()
 	}
 }
 
