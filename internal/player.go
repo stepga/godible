@@ -8,16 +8,27 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"time"
 
 	"github.com/anisse/alsa"
 )
 
 const (
-	DATADIR = "/perm/godible-data/"
+	DATADIR      = "/perm/godible-data/"
+	CMD_TOGGLE   = "TOGGLE" // toggle play or pause
+	CMD_QUIT     = "QUIT"
+	CMD_NEXT     = "NEXT"
+	CMD_PREVIOUS = "PREVIOUS"
 )
 
 // TODO: add reading command via unix socket for debugging
+
+type Player struct {
+	current         *list.Element
+	queue           chan *list.Element
+	audioMediumList *list.List
+	cancelfunc      context.CancelFunc
+	Command         chan string
+}
 
 type AudioMedium struct {
 	path string
@@ -26,14 +37,6 @@ type AudioMedium struct {
 	// TODO: implement size
 	size     int64  // fs#FileInfo.Size
 	checksum []byte // hash#Hash.Sum
-}
-
-type Player struct {
-	current         *list.Element
-	queue           chan *list.Element
-	playing         bool
-	audioMediumList *list.List
-	stopfunc        context.CancelFunc
 }
 
 func fileHash(filepath string) ([]byte, error) {
@@ -130,6 +133,7 @@ func NewPlayer() (*Player, error) {
 	slog.Debug("gathered files", "len", audioMediumList.Len())
 	return &Player{
 		audioMediumList: audioMediumList,
+		Command:         make(chan string),
 	}, nil
 }
 
@@ -175,6 +179,14 @@ func doPlay(ctx context.Context, am *AudioMedium) {
 	}
 	defer file.Close()
 
+	if am.offset != 0 {
+		seeked_offset, err := file.Seek(am.offset, 0)
+		if err != nil {
+			slog.Error("failed to continue paused title", "path", am.path, "offset", am.offset, "err", err)
+		}
+		slog.Debug("continue paused title", "path", am.path, "offset", am.offset, "seeked_offset", seeked_offset)
+	}
+
 	// alsaplayer.Write is not abortable/interruptable.
 	// io.Copy (as in copyctx.go of github.com/anisse/alsa) failed with 'short write' (always 2 bytes short)
 	// Therefore, our own WriteCtx is interruptable by introducing a
@@ -183,58 +195,89 @@ func doPlay(ctx context.Context, am *AudioMedium) {
 	if err != nil {
 		switch err {
 		case context.Canceled:
-			slog.Debug("stop playing of current title", "path", am.path, "offset", written_bytes, "size", am.size)
-			am.offset = written_bytes
+			slog.Debug("cancel playing of current title", "path", am.path, "offset", written_bytes, "size", am.size)
+			am.offset = am.offset + written_bytes
 		default:
 			slog.Error("playing failed", "path", am.path, "err", err)
 		}
+	} else {
+		am.offset = 0
 	}
 	slog.Debug("doPlay done", "path", am.path, "offset", am.offset, "size", am.size)
 }
 
-func (player *Player) Play(ctx context.Context) {
-	am := player.getCurrentAudioMedium()
-	if am == nil {
-		slog.Error("Play failed: current title can not be detected")
-		return
-	}
-	doPlay(ctx, am)
-}
+func (player *Player) Play() {
+	defer func() {
+		player.cancelfunc = nil
+	}()
 
-func (player *Player) Run() {
-	// TODO: create a select state machine with one waitgroup
-	// - pause/play
-	// - previous
-	// - next
 	for {
-		if player.current == nil {
-			slog.Info("Play: try to determine unset current title")
-			player.setCurrent()
-			time.Sleep(1 * time.Second)
-			player.setCurrent()
-			continue
+		ctx, cancelfunc := context.WithCancel(context.Background())
+		player.cancelfunc = cancelfunc
+
+		am := player.getCurrentAudioMedium()
+		if am == nil {
+			slog.Error("Play failed: current title can not be detected")
+			return
 		}
-		current, _ := player.current.Value.(*AudioMedium)
-		slog.Info("Play: determined current title", "current", current.path)
-		ctx, stop := context.WithCancel(context.Background())
-		player.stopfunc = stop
-		player.Play(ctx)
-		player.stopfunc = nil
+		doPlay(ctx, am)
+		if am.offset != 0 {
+			slog.Debug("Play has been interrupted", "current", am.path, "offset", am.offset)
+			// paused via cancelfunc
+			return
+		}
 		player.current = player.current.Next()
 	}
 }
-
-// FIXME: Stop() is currently more like a "Next" function
-func (player *Player) Stop() {
-	if player.stopfunc != nil {
-		player.stopfunc()
+func (player *Player) Toggle() {
+	if player.cancelfunc != nil {
+		player.cancelfunc()
+	} else {
+		player.Play()
 	}
 }
 
 func (player *Player) Next() {
-	// TODO: implement me
+	if player.cancelfunc != nil {
+		player.cancelfunc()
+	}
+
+	am := player.getCurrentAudioMedium()
+	if am == nil {
+		slog.Error("CMD_NEXT failed: current title can not be detected")
+		return
+	}
+	am.offset = 0
+
+	player.current = player.current.Next()
+	player.Play()
 }
 
 func (player *Player) Previous() {
-	// TODO: implement me
+	slog.Error("TODO: implement Player.Previous")
+}
+
+func (player *Player) Quit() {
+	slog.Error("TODO: implement Player.Quit")
+}
+
+func (player *Player) Run() {
+	for {
+		// TODO: lock needed (?), and button press cancels immediately the current operation
+		slog.Debug("wait for command")
+		command := <-player.Command
+		slog.Debug("received command", "command", command)
+		switch command {
+		case CMD_NEXT:
+			go player.Next()
+		case CMD_PREVIOUS:
+			go player.Previous()
+		case CMD_QUIT:
+			go player.Quit()
+		case CMD_TOGGLE:
+			go player.Toggle()
+		default:
+			slog.Error("unknown command", "command", command)
+		}
+	}
 }

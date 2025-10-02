@@ -17,23 +17,32 @@ func main() {
 		slog.Error("NewPlayer: initializing player failed", "err", err)
 		os.Exit(1)
 	}
-	go player.Run()
 
-	err = RegisterPinFunc("GPIO4", player.Stop)
+	err = RegisterPinFunc("GPIO4", func() {
+		slog.Debug("GPIO4: trigger PREVIOUS")
+		player.Command <- CMD_PREVIOUS
+	})
 	if err != nil {
 		slog.Error("RegisterPinFunc failed", "err", err)
 		os.Exit(1)
 	}
-	err = RegisterPinFunc("GPIO23", player.Stop)
+	err = RegisterPinFunc("GPIO23", func() {
+		slog.Debug("GPIO23: trigger TOGGLE")
+		player.Command <- CMD_TOGGLE
+	})
 	if err != nil {
 		slog.Error("RegisterPinFunc failed", "err", err)
 		os.Exit(1)
 	}
-	err = RegisterPinFunc("GPIO24", player.Stop)
+	err = RegisterPinFunc("GPIO24", func() {
+		slog.Debug("GPIO24: trigger NEXT")
+		player.Command <- CMD_NEXT
+	})
 	if err != nil {
 		slog.Error("RegisterPinFunc failed", "err", err)
 		os.Exit(1)
 	}
+	go player.Run()
 
 	// TODO: web interface
 	//   - upload songs
