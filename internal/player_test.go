@@ -33,7 +33,8 @@ func listContainsPath(t *testing.T, fileList *list.List, path string) bool {
 		if !ok {
 			t.Fatalf("expected *AudioMedium; is %+v", element.Value)
 		}
-		if am.Path == path {
+		amPath := am.GetPath()
+		if amPath == path {
 			return true
 		}
 		element = element.Next()
@@ -94,8 +95,9 @@ func TestFileHashes(t *testing.T) {
 	fileList := list.New()
 	doTestFileList(t, fileList, tmpBaseDir)
 	am, _ := fileList.Front().Value.(*AudioMedium)
-	if !bytes.Equal(expectedChecksum, am.Checksum) {
-		t.Errorf("expected checksum to be %x, is %x", expectedChecksum, am.Checksum)
+	isChecksum := am.GetChecksum()
+	if !bytes.Equal(expectedChecksum, isChecksum) {
+		t.Errorf("expected checksum to be %x, is %x", expectedChecksum, isChecksum)
 	}
 }
 
@@ -109,8 +111,8 @@ func TestExoticPaths(t *testing.T) {
 	}
 
 	content := []byte("hello\n")
-	filePath := tmpBaseDir + path_str + "/file"
-	err = os.WriteFile(filePath, content, 0644)
+	expectedPath := tmpBaseDir + path_str + "/file"
+	err = os.WriteFile(expectedPath, content, 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +123,8 @@ func TestExoticPaths(t *testing.T) {
 		t.Errorf("expected a file in gathered list")
 	}
 	am, _ := fileList.Front().Value.(*AudioMedium)
-	if filepath.Clean(am.Path) != filepath.Clean(filePath) {
-		t.Errorf("expected Path to be %s, is %s", filePath, am.Path)
+	isPath := am.GetPath()
+	if filepath.Clean(isPath) != filepath.Clean(expectedPath) {
+		t.Errorf("expected Path to be %s, is %s", expectedPath, isPath)
 	}
 }

@@ -20,12 +20,12 @@ const (
 // TODO: add reading command via unix socket for debugging
 
 type AudioMedium struct {
-	Path string
+	path string
 	// TODO: implement pause/play logic with offset
 	offset int64 // io#Seeker.Seek
 	// TODO: implement size
 	size     int64  // fs#FileInfo.Size
-	Checksum []byte // hash#Hash.Sum
+	checksum []byte // hash#Hash.Sum
 }
 
 type Player struct {
@@ -34,13 +34,6 @@ type Player struct {
 	playing         bool
 	audioMediumList *list.List
 	stop            context.CancelFunc
-}
-
-func (am *AudioMedium) String() string {
-	if am == nil {
-		return "nil"
-	}
-	return fmt.Sprintf("{Path: %s, offset: %d, size: %d, Checksum: %x}", am.Path, am.offset, am.size, am.Checksum)
 }
 
 func fileHash(filepath string) ([]byte, error) {
@@ -63,6 +56,21 @@ func fileSize(filepath string) (int64, error) {
 	}
 	// get the size
 	return fi.Size(), nil
+}
+
+func (am *AudioMedium) GetPath() string {
+	return am.path
+}
+
+func (am *AudioMedium) GetChecksum() []byte {
+	return am.checksum
+}
+
+func (am *AudioMedium) String() string {
+	if am == nil {
+		return "nil"
+	}
+	return fmt.Sprintf("{path: %s, offset: %d, size: %d, checksum: %x}", am.path, am.offset, am.size, am.checksum)
 }
 
 // TODO: implement recursive file/dir watch,, e.g via https://github.com/fsnotify/fsnotify/issues/18#issuecomment-3109424560
@@ -103,8 +111,8 @@ func GatherAudioMediumsDir(audioMediumList *list.List, root string) error {
 				continue
 			}
 			audioMedium := &AudioMedium{
-				Path:     entry_path,
-				Checksum: checksum,
+				path:     entry_path,
+				checksum: checksum,
 				size:     filesize,
 			}
 			audioMediumList.PushBack(audioMedium)
@@ -150,7 +158,7 @@ func (player *Player) getCurrentAudioMedium() *AudioMedium {
 }
 
 func doPlay(ctx context.Context, am *AudioMedium) {
-	slog.Debug("doPlay begin", "path", am.Path, "offset", am.offset, "size", am.size)
+	slog.Debug("doPlay begin", "path", am.path, "offset", am.offset, "size", am.size)
 
 	// FIXME: first open file, then check samplerate, and then initialize player with 44100 or 48000 Hz
 	alsaplayer, err := alsa.NewPlayer(44100, 2, 2, 4096)
@@ -160,9 +168,9 @@ func doPlay(ctx context.Context, am *AudioMedium) {
 	}
 	defer alsaplayer.Close()
 
-	file, err := os.Open(am.Path)
+	file, err := os.Open(am.path)
 	if err != nil {
-		slog.Error("file can not be opened", "path", am.Path, "err", err)
+		slog.Error("file can not be opened", "path", am.path, "err", err)
 		return
 	}
 	defer file.Close()
@@ -175,13 +183,13 @@ func doPlay(ctx context.Context, am *AudioMedium) {
 	if err != nil {
 		switch err {
 		case context.Canceled:
-			slog.Debug("stop playing of current title", "path", am.Path, "offset", written_bytes, "size", am.size)
+			slog.Debug("stop playing of current title", "path", am.path, "offset", written_bytes, "size", am.size)
 			am.offset = written_bytes
 		default:
-			slog.Error("playing failed", "path", am.Path, "err", err)
+			slog.Error("playing failed", "path", am.path, "err", err)
 		}
 	}
-	slog.Debug("doPlay done", "path", am.Path, "offset", am.offset, "size", am.size)
+	slog.Debug("doPlay done", "path", am.path, "offset", am.offset, "size", am.size)
 }
 
 func (player *Player) Play(ctx context.Context) {
@@ -194,7 +202,7 @@ func (player *Player) Play(ctx context.Context) {
 }
 
 func (player *Player) Run() {
-	// TODO create a select state machine with one waitgroup
+	// TODO: create a select state machine with one waitgroup
 	// - pause/play
 	// - previous
 	// - next
@@ -207,7 +215,7 @@ func (player *Player) Run() {
 			continue
 		}
 		current, _ := player.current.Value.(*AudioMedium)
-		slog.Info("Play: determined current title", "current", current.Path)
+		slog.Info("Play: determined current title", "current", current.path)
 		ctx, stop := context.WithCancel(context.Background())
 		player.stop = stop
 		player.Play(ctx)
@@ -223,12 +231,10 @@ func (player *Player) Stop() {
 	}
 }
 
-func (player *Player) Next() (*AudioMedium, error) {
+func (player *Player) Next() {
 	// TODO: implement me
-	return nil, nil
 }
 
-func (player *Player) Previous() (*AudioMedium, error) {
+func (player *Player) Previous() {
 	// TODO: implement me
-	return nil, nil
 }
