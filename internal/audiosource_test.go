@@ -16,8 +16,8 @@ func closeFile(t *testing.T, file *os.File) {
 	}
 }
 
-func doTestFileList(t *testing.T, audioMediumList *list.List, root string) {
-	err := GatherAudioMediumsDir(audioMediumList, root)
+func doTestFileList(t *testing.T, audioSourceList *list.List, root string) {
+	err := CreateAudioSourceList(audioSourceList, root)
 	if err != nil {
 		t.Errorf("dir %s; unexpected error: %s", root, err)
 	}
@@ -29,11 +29,11 @@ func listContainsPath(t *testing.T, fileList *list.List, path string) bool {
 		if element == nil {
 			return false
 		}
-		am, ok := element.Value.(*AudioMedium)
+		as, ok := element.Value.(*AudioSource)
 		if !ok {
-			t.Fatalf("expected *AudioMedium; is %+v", element.Value)
+			t.Fatalf("expected *AudioSource; is %+v", element.Value)
 		}
-		amPath := am.GetPath()
+		amPath := as.GetPath()
 		if amPath == path {
 			return true
 		}
@@ -94,8 +94,8 @@ func TestFileHashes(t *testing.T) {
 
 	fileList := list.New()
 	doTestFileList(t, fileList, tmpBaseDir)
-	am, _ := fileList.Front().Value.(*AudioMedium)
-	isChecksum := am.GetChecksum()
+	as, _ := fileList.Front().Value.(*AudioSource)
+	isChecksum := as.GetChecksum()
 	if !bytes.Equal(expectedChecksum, isChecksum) {
 		t.Errorf("expected checksum to be %x, is %x", expectedChecksum, isChecksum)
 	}
@@ -122,8 +122,8 @@ func TestExoticPaths(t *testing.T) {
 	if fileList.Len() != 1 {
 		t.Errorf("expected a file in gathered list")
 	}
-	am, _ := fileList.Front().Value.(*AudioMedium)
-	isPath := am.GetPath()
+	as, _ := fileList.Front().Value.(*AudioSource)
+	isPath := as.GetPath()
 	if filepath.Clean(isPath) != filepath.Clean(expectedPath) {
 		t.Errorf("expected Path to be %s, is %s", expectedPath, isPath)
 	}

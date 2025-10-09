@@ -3,9 +3,6 @@ package godible
 import (
 	"container/list"
 	"context"
-	"crypto/sha256"
-	"fmt"
-	"io"
 	"log/slog"
 	"os"
 
@@ -25,114 +22,22 @@ const (
 type Player struct {
 	current         *list.Element
 	queue           chan *list.Element
-	audioMediumList *list.List
+	audioSourceList *list.List
 	cancelfunc      context.CancelFunc
 	Command         chan string
 }
 
-type AudioMedium struct {
-	path string
-	// TODO: implement pause/play logic with offset
-	offset int64 // io#Seeker.Seek
-	// TODO: implement size
-	size     int64  // fs#FileInfo.Size
-	checksum []byte // hash#Hash.Sum
-}
-
-func fileHash(filepath string) ([]byte, error) {
-	file, err := os.Open(filepath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	h := sha256.New()
-	if _, err := io.Copy(h, file); err != nil {
-		return nil, err
-	}
-	return h.Sum(nil), nil
-}
-
-func fileSize(filepath string) (int64, error) {
-	fi, err := os.Stat(filepath)
-	if err != nil {
-		return 0, err
-	}
-	// get the size
-	return fi.Size(), nil
-}
-
-func (am *AudioMedium) GetPath() string {
-	return am.path
-}
-
-func (am *AudioMedium) GetChecksum() []byte {
-	return am.checksum
-}
-
-func (am *AudioMedium) String() string {
-	if am == nil {
-		return "nil"
-	}
-	return fmt.Sprintf("{path: %s, offset: %d, size: %d, checksum: %x}", am.path, am.offset, am.size, am.checksum)
-}
-
-// TODO: implement recursive file/dir watch,, e.g via https://github.com/fsnotify/fsnotify/issues/18#issuecomment-3109424560
-func GatherAudioMediumsDir(audioMediumList *list.List, root string) error {
-	if audioMediumList == nil {
-		audioMediumList = list.New()
-	}
-	root_fileinfo, err := os.Stat(root)
-	if err != nil {
-		return err
-	}
-	if !root_fileinfo.Mode().IsDir() {
-		return fmt.Errorf("given path is not a directory: %s", root)
-	}
-	entries, err := os.ReadDir(root)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		entry_path := root + "/" + entry.Name()
-		if entry.IsDir() {
-			err := GatherAudioMediumsDir(audioMediumList, entry_path)
-			if err != nil {
-				slog.Error("GatherAudioMediumsDir for subdirectory failed", "directory", entry_path)
-			}
-			continue
-		}
-		if entry.Type().IsRegular() {
-			checksum, err := fileHash(entry_path)
-			if err != nil {
-				slog.Error("fileHash for regular file failed", "file", entry_path, "err", err)
-				continue
-			}
-			filesize, err := fileSize(entry_path)
-			if err != nil {
-				slog.Error("fileSize for regular file failed", "file", entry_path, "err", err)
-				continue
-			}
-			audioMedium := &AudioMedium{
-				path:     entry_path,
-				checksum: checksum,
-				size:     filesize,
-			}
-			audioMediumList.PushBack(audioMedium)
-		}
-	}
-	return nil
-}
+// TODO: add sync.Mutex to Player, to synchronize all access/writes to audioSourceList
 
 func NewPlayer() (*Player, error) {
-	audioMediumList := list.New()
-	err := GatherAudioMediumsDir(audioMediumList, DATADIR)
+	audioSourceList := list.New()
+	err := CreateAudioSourceList(audioSourceList, DATADIR)
 	if err != nil {
 		return nil, err
 	}
-	slog.Debug("gathered files", "len", audioMediumList.Len())
+	slog.Debug("gathered files", "len", audioSourceList.Len())
 	return &Player{
-		audioMediumList: audioMediumList,
+		audioSourceList: audioSourceList,
 		Command:         make(chan string),
 	}, nil
 }
@@ -143,26 +48,26 @@ func (player *Player) setCurrent() {
 	}
 
 	select {
-	case am := <-player.queue:
-		player.current = am
+	case as := <-player.queue:
+		player.current = as
 	default:
-		player.current = player.audioMediumList.Front()
+		player.current = player.audioSourceList.Front()
 	}
 }
 
-func (player *Player) getCurrentAudioMedium() *AudioMedium {
+func (player *Player) getCurrent() *AudioSource {
 	player.setCurrent()
 	if player.current != nil {
-		am, ok := player.current.Value.(*AudioMedium)
+		as, ok := player.current.Value.(*AudioSource)
 		if ok {
-			return am
+			return as
 		}
 	}
 	return nil
 }
 
-func doPlay(ctx context.Context, am *AudioMedium) {
-	slog.Debug("doPlay begin", "path", am.path, "offset", am.offset, "size", am.size)
+func doPlay(ctx context.Context, as *AudioSource) {
+	slog.Debug("doPlay begin", "path", as.path, "offset", as.offset, "size", as.size)
 
 	// FIXME: first open file, then check samplerate, and then initialize player with 44100 or 48000 Hz
 	alsaplayer, err := alsa.NewPlayer(44100, 2, 2, 4096)
@@ -172,19 +77,19 @@ func doPlay(ctx context.Context, am *AudioMedium) {
 	}
 	defer alsaplayer.Close()
 
-	file, err := os.Open(am.path)
+	file, err := os.Open(as.path)
 	if err != nil {
-		slog.Error("file can not be opened", "path", am.path, "err", err)
+		slog.Error("file can not be opened", "path", as.path, "err", err)
 		return
 	}
 	defer file.Close()
 
-	if am.offset != 0 {
-		seeked_offset, err := file.Seek(am.offset, 0)
+	if as.offset != 0 {
+		seeked_offset, err := file.Seek(as.offset, 0)
 		if err != nil {
-			slog.Error("failed to continue paused title", "path", am.path, "offset", am.offset, "err", err)
+			slog.Error("failed to continue paused title", "path", as.path, "offset", as.offset, "err", err)
 		}
-		slog.Debug("continue paused title", "path", am.path, "offset", am.offset, "seeked_offset", seeked_offset)
+		slog.Debug("continue paused title", "path", as.path, "offset", as.offset, "seeked_offset", seeked_offset)
 	}
 
 	// alsaplayer.Write is not abortable/interruptable.
@@ -195,15 +100,15 @@ func doPlay(ctx context.Context, am *AudioMedium) {
 	if err != nil {
 		switch err {
 		case context.Canceled:
-			slog.Debug("cancel playing of current title", "path", am.path, "offset", written_bytes, "size", am.size)
-			am.offset = am.offset + written_bytes
+			slog.Debug("cancel playing of current title", "path", as.path, "offset", written_bytes, "size", as.size)
+			as.offset = as.offset + written_bytes
 		default:
-			slog.Error("playing failed", "path", am.path, "err", err)
+			slog.Error("playing failed", "path", as.path, "err", err)
 		}
 	} else {
-		am.offset = 0
+		as.offset = 0
 	}
-	slog.Debug("doPlay done", "path", am.path, "offset", am.offset, "size", am.size)
+	slog.Debug("doPlay done", "path", as.path, "offset", as.offset, "size", as.size)
 }
 
 func (player *Player) Play() {
@@ -215,14 +120,14 @@ func (player *Player) Play() {
 		ctx, cancelfunc := context.WithCancel(context.Background())
 		player.cancelfunc = cancelfunc
 
-		am := player.getCurrentAudioMedium()
-		if am == nil {
+		as := player.getCurrent()
+		if as == nil {
 			slog.Error("Play failed: current title can not be detected")
 			return
 		}
-		doPlay(ctx, am)
-		if am.offset != 0 {
-			slog.Debug("Play has been interrupted", "current", am.path, "offset", am.offset)
+		doPlay(ctx, as)
+		if as.offset != 0 {
+			slog.Debug("Play has been interrupted", "current", as.path, "offset", as.offset)
 			// paused via cancelfunc
 			return
 		}
@@ -242,12 +147,12 @@ func (player *Player) Next() {
 		player.cancelfunc()
 	}
 
-	am := player.getCurrentAudioMedium()
-	if am == nil {
+	as := player.getCurrent()
+	if as == nil {
 		slog.Error("CMD_NEXT failed: current title can not be detected")
 		return
 	}
-	am.offset = 0
+	as.offset = 0
 
 	player.current = player.current.Next()
 	player.Play()
