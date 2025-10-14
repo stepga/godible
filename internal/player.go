@@ -92,7 +92,7 @@ func doPlay(ctx context.Context, as *AudioSource) error {
 		return err
 	}
 	// XXX: alsaplayer discards mono wav files, but it seems to work anyways
-	// FIXME: correct fix would be to convert it to stereo on-the-fly
+	// TODO: convert (wav) files to correct format (?)
 	channelNum := max(wavMetadata.channelNum, 2)
 	// XXX: keep bufferSizeInBytes to fixed 4kB for now
 	bufferSizeInBytes := 4096
@@ -103,7 +103,6 @@ func doPlay(ctx context.Context, as *AudioSource) error {
 		bufferSizeInBytes,
 	)
 	if err != nil {
-		// TODO: button pushes don't work for some NewPlayer errors? ... further investigating needed
 		return err
 	}
 	defer alsaplayer.Close()
@@ -204,7 +203,12 @@ func (player *Player) Next() {
 		return
 	}
 	player.setCurrentsNext()
-	player.toggleCh <- true
+	select {
+	case player.toggleCh <- true:
+	default:
+		// XXX: flood of next button pushes lead to race condition due to missing receiver
+		slog.Error("missing receiver for sent Next() signal")
+	}
 }
 
 func (player *Player) Previous() {
