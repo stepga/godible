@@ -11,15 +11,6 @@ import (
 	"github.com/go-audio/wav"
 )
 
-// TODO: instead of hardcoding nonsense strings introduce something like
-//
-//   type command int
-//   const (
-//     TOGGLE command = iota
-//     NEXT
-//     ...
-//   )
-
 const (
 	DATADIR      = "/perm/godible-data/"
 	CMD_TOGGLE   = "TOGGLE" // toggle play or pause
@@ -27,10 +18,18 @@ const (
 	CMD_PREVIOUS = "PREVIOUS"
 )
 
+type CommandVal int
+
+const (
+	TOGGLE CommandVal = iota
+	NEXT
+	PREVIOUS
+)
+
 // TODO: add reading command via unix socket for debugging
 
 type Player struct {
-	Command         chan string
+	Command         chan CommandVal
 	audioSourceList *list.List
 	cancelfunc      context.CancelCauseFunc
 	current         *list.Element
@@ -55,7 +54,7 @@ func NewPlayer() (*Player, error) {
 	slog.Debug("gathered files", "len", audioSourceList.Len())
 	return &Player{
 		audioSourceList: audioSourceList,
-		Command:         make(chan string),
+		Command:         make(chan CommandVal),
 		current:         audioSourceList.Front(),
 		toggleCh:        make(chan bool),
 	}, nil
@@ -222,11 +221,11 @@ func (player *Player) Run() {
 		command := <-player.Command
 		slog.Debug("received command", "command", command)
 		switch command {
-		case CMD_NEXT:
+		case NEXT:
 			player.Next()
-		case CMD_PREVIOUS:
+		case PREVIOUS:
 			player.Previous()
-		case CMD_TOGGLE:
+		case TOGGLE:
 			player.Toggle()
 		default:
 			slog.Error("unknown command", "command", command)
