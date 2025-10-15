@@ -74,6 +74,16 @@ func (player *Player) getCurrentAudioSource() *AudioSource {
 	return nil
 }
 
+// TODO: when playing a track and triggering Previous(), we want to reset the current song to offset = 0
+func (player *Player) setCurrentsPrevious() {
+	if player.current != nil {
+		player.current = player.current.Prev()
+	}
+	if player.current == nil {
+		player.current = player.audioSourceList.Back()
+	}
+}
+
 func (player *Player) setCurrentsNext() {
 	if player.current != nil {
 		player.current = player.current.Next()
@@ -211,7 +221,20 @@ func (player *Player) Next() {
 }
 
 func (player *Player) Previous() {
-	slog.Error("TODO: implement Player.Previous")
+	player.executeCancel(cancelReasonNext)
+
+	as := player.getCurrentAudioSource()
+	if as == nil {
+		slog.Error("current title can not be detected")
+		return
+	}
+	player.setCurrentsPrevious()
+	select {
+	case player.toggleCh <- true:
+	default:
+		// XXX: flood of next button pushes lead to race condition due to missing receiver
+		slog.Error("missing receiver for sent Next() signal")
+	}
 }
 
 func (player *Player) Run() {

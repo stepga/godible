@@ -9,11 +9,15 @@
   * config `gzip -d /proc/config.gz -c  | less`
   * kernel parameters: `cat /proc/cmdline`
 
+## FIXMEs
+
+* racy channel writing/reading Play/Next/Previuos ...
+
 ## TODOs
 
 * add reading commands via unix socket for debugging
 * rename AudioSource to Track ... or something less rough
-* implement Previous()
+* implement Previous() reset of currently played track
 * implement recursive file/dir watch and update Player.audioSourceList
   * e.g via https://github.com/fsnotify/fsnotify/issues/18#issuecomment-3109424560
 * gpio: detect long press and implement other functions
