@@ -11,20 +11,23 @@
 
 ## TODOs
 
-* play sound via soundcard
-  * beatbox uses custom kernel and self-written minimal alsa (in go)
-  * custom kernel does not seem necessary anymore
-  (https://github.com/gokrazy/gokrazy/discussions/238#discussioncomment-7968624),
-  but changing config.json & using the go-written alsa is probably still necessary
-  (https://github.com/gokrazy/gokrazy/discussions/238#discussioncomment-7968624)
-  * TODO: test if
-  https://github.com/anisse/beatbox-kernel/commit/f597f35750fa1703a81bef621056225faaec3237
-  is really within current gokrazy kernel
-* music player module
+* add reading commands via unix socket for debugging
+* rename AudioSource to Track ... or something less rough
+* implement Previous()
+* implement recursive file/dir watch and update Player.audioSourceList
+  * e.g via https://github.com/fsnotify/fsnotify/issues/18#issuecomment-3109424560
+* gpio: detect long press and implement other functions
+  * e.g. fast forward
+
+* support mp3/ogg
+  * transform to wav when upload, OR
+  * encode to wav during play
 * web control interface
-  * play/pause songs on /perm (save state)
+  * play/pause songs
+  * save player state on /perm to survive reboots
   * upload songs
   * delete songs
-  * edit playlist
-* webcam qr code module (via button push?)
+* webcam qr code module
+  * decide: via button push or e.g. one webcam shot per second check?
+  * see also https://github.com/makiuchi-d/gozxing
 * fritzing of the hardware setup
