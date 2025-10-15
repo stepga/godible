@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log/slog"
 	"os"
+	"sync"
 
 	"github.com/anisse/alsa"
 	"github.com/go-audio/wav"
@@ -29,7 +30,8 @@ const (
 // TODO: add reading command via unix socket for debugging
 
 type Player struct {
-	Command         chan CommandVal
+	CommandChan     chan CommandVal
+	commandMutex    sync.Mutex
 	audioSourceList *list.List
 	cancelfunc      context.CancelCauseFunc
 	current         *list.Element
@@ -54,7 +56,7 @@ func NewPlayer() (*Player, error) {
 	slog.Debug("gathered files", "len", audioSourceList.Len())
 	return &Player{
 		audioSourceList: audioSourceList,
-		Command:         make(chan CommandVal),
+		CommandChan:     make(chan CommandVal),
 		current:         audioSourceList.Front(),
 		toggleCh:        make(chan bool),
 	}, nil
@@ -196,6 +198,9 @@ func (player *Player) Play() {
 }
 
 func (player *Player) Toggle() {
+	player.commandMutex.Lock()
+	defer player.commandMutex.Unlock()
+
 	if !player.isPaused() {
 		player.executeCancel(cancelReasonPause)
 	} else {
@@ -204,6 +209,9 @@ func (player *Player) Toggle() {
 }
 
 func (player *Player) Next() {
+	player.commandMutex.Lock()
+	defer player.commandMutex.Unlock()
+
 	player.executeCancel(cancelReasonNext)
 
 	as := player.getCurrentAudioSource()
@@ -221,6 +229,9 @@ func (player *Player) Next() {
 }
 
 func (player *Player) Previous() {
+	player.commandMutex.Lock()
+	defer player.commandMutex.Unlock()
+
 	player.executeCancel(cancelReasonNext)
 
 	as := player.getCurrentAudioSource()
@@ -241,7 +252,7 @@ func (player *Player) Run() {
 	go player.Play()
 	for {
 		slog.Debug("wait for command")
-		command := <-player.Command
+		command := <-player.CommandChan
 		slog.Debug("received command", "command", command)
 		switch command {
 		case NEXT:
