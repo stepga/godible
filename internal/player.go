@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/anisse/alsa"
+	"github.com/go-audio/wav"
 )
 
 // TODO: instead of hardcoding nonsense strings introduce something like
@@ -34,6 +35,12 @@ type Player struct {
 	cancelfunc      context.CancelCauseFunc
 	current         *list.Element
 	toggleCh        chan bool
+}
+
+type WavMetadata struct {
+	bytesPerSample int
+	sampleRate     int
+	channelNum     int
 }
 
 var cancelReasonNext = errors.New("next")
@@ -80,9 +87,23 @@ func (player *Player) setCurrentsNext() {
 func doPlay(ctx context.Context, as *AudioSource) error {
 	slog.Debug("doPlay begin", "AudioSource", as.String())
 
-	// FIXME: first open file, then check samplerate, and then initialize player with 44100 or 48000 Hz
-	alsaplayer, err := alsa.NewPlayer(44100, 2, 2, 4096)
+	wavMetadata, err := readWavMetadata(as.path)
 	if err != nil {
+		return err
+	}
+	// XXX: alsaplayer discards mono wav files, but it seems to work anyways
+	// FIXME: correct fix would be to convert it to stereo on-the-fly
+	channelNum := max(wavMetadata.channelNum, 2)
+	// XXX: keep bufferSizeInBytes to fixed 4kB for now
+	bufferSizeInBytes := 4096
+	alsaplayer, err := alsa.NewPlayer(
+		wavMetadata.sampleRate,
+		channelNum,
+		wavMetadata.bytesPerSample,
+		bufferSizeInBytes,
+	)
+	if err != nil {
+		// TODO: button pushes don't work for some NewPlayer errors? ... further investigating needed
 		return err
 	}
 	defer alsaplayer.Close()
@@ -123,6 +144,25 @@ func (player *Player) executeCancel(cause error) bool {
 	return false
 }
 
+func readWavMetadata(path string) (*WavMetadata, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	d := wav.NewDecoder(f)
+	d.ReadInfo()
+	err = d.Err()
+	if err != nil {
+		return nil, err
+	}
+	return &WavMetadata{
+		bytesPerSample: int(d.SampleBitDepth() / 8),
+		sampleRate:     int(d.SampleRate),
+		channelNum:     int(d.NumChans),
+	}, nil
+}
+
 func (player *Player) Play() {
 	for {
 		<-player.toggleCh
@@ -139,6 +179,8 @@ func (player *Player) Play() {
 			if err == context.Canceled {
 				slog.Debug("interrupt/cancelation", "AudioSource", as.String())
 				break
+			} else if err != nil {
+				slog.Error("doPlay() failed", "AudioSource", as.String(), "error", err)
 			}
 			player.setCurrentsNext()
 		}
