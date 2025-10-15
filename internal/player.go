@@ -3,6 +3,7 @@ package godible
 import (
 	"container/list"
 	"context"
+	"errors"
 	"log/slog"
 	"os"
 
@@ -30,10 +31,13 @@ const (
 type Player struct {
 	Command         chan string
 	audioSourceList *list.List
-	cancelfunc      context.CancelFunc
+	cancelfunc      context.CancelCauseFunc
 	current         *list.Element
 	toggleCh        chan bool
 }
+
+var cancelReasonNext = errors.New("next")
+var cancelReasonPause = errors.New("pause")
 
 func NewPlayer() (*Player, error) {
 	audioSourceList := list.New()
@@ -74,7 +78,7 @@ func (player *Player) setCurrentsNext() {
 }
 
 func doPlay(ctx context.Context, as *AudioSource) error {
-	slog.Debug("doPlay begin", "path", as.path, "offset", as.offset, "size", as.size)
+	slog.Debug("doPlay begin", "AudioSource", as.String())
 
 	// FIXME: first open file, then check samplerate, and then initialize player with 44100 or 48000 Hz
 	alsaplayer, err := alsa.NewPlayer(44100, 2, 2, 4096)
@@ -90,11 +94,11 @@ func doPlay(ctx context.Context, as *AudioSource) error {
 	defer file.Close()
 
 	if as.offset != 0 {
-		seeked_offset, err := file.Seek(as.offset, 0)
+		_, err := file.Seek(as.offset, 0)
 		if err != nil {
 			return err
 		}
-		slog.Debug("continue paused title", "path", as.path, "offset", as.offset, "seeked_offset", seeked_offset)
+		slog.Debug("continue paused title", "AudioSource", as.String())
 	}
 
 	// alsaplayer.Write is not abortable/interruptable.
@@ -102,18 +106,17 @@ func doPlay(ctx context.Context, as *AudioSource) error {
 	// Therefore, our own WriteCtx is interruptable by introducing a
 	// contexed, oldschool, buffered write.
 	written_bytes, err := WriteCtx(ctx, alsaplayer, file)
-	switch err {
-	case context.Canceled:
-		as.offset = as.offset + written_bytes // FIXME: use WithCancelCause and differ whether Next or whether paused
-	case nil:
+	if err == context.Canceled && context.Cause(ctx) == cancelReasonPause {
+		as.offset = as.offset + written_bytes
+	} else {
 		as.offset = 0
 	}
 	return err
 }
 
-func (player *Player) executeCancel() bool {
+func (player *Player) executeCancel(cause error) bool {
 	if player.cancelfunc != nil {
-		player.cancelfunc()
+		player.cancelfunc(cause)
 		player.cancelfunc = nil
 		return true
 	}
@@ -130,11 +133,11 @@ func (player *Player) Play() {
 				slog.Error("could not fetch current AudioSource")
 				os.Exit(1)
 			}
-			ctx, cancelfunc := context.WithCancel(context.Background())
+			ctx, cancelfunc := context.WithCancelCause(context.Background())
 			player.cancelfunc = cancelfunc
 			err := doPlay(ctx, as)
 			if err == context.Canceled {
-				slog.Debug("interrupt/cancelation", "current", as.path, "offset", as.offset)
+				slog.Debug("interrupt/cancelation", "AudioSource", as.String())
 				break
 			}
 			player.setCurrentsNext()
@@ -144,24 +147,20 @@ func (player *Player) Play() {
 
 func (player *Player) Toggle() {
 	if !player.isPaused() {
-		player.executeCancel()
+		player.executeCancel(cancelReasonPause)
 	} else {
 		player.toggleCh <- true
 	}
 }
 
 func (player *Player) Next() {
-	player.executeCancel()
+	player.executeCancel(cancelReasonNext)
 
 	as := player.getCurrentAudioSource()
 	if as == nil {
 		slog.Error("current title can not be detected")
 		return
 	}
-	// FIXME: this does not seem to work ... Next-ing songs still results in continuing them
-	// FIXME: use WithCancelCause and differ whether Next or whether paused
-	as.offset = 0
-
 	player.setCurrentsNext()
 	player.toggleCh <- true
 }
@@ -173,7 +172,6 @@ func (player *Player) Previous() {
 func (player *Player) Run() {
 	go player.Play()
 	for {
-		// TODO: lock needed (?), and button press cancels immediately the current operation
 		slog.Debug("wait for command")
 		command := <-player.Command
 		slog.Debug("received command", "command", command)
