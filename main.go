@@ -18,23 +18,29 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = RegisterPinFunc("GPIO4", func() {
-		player.Command(PREVIOUS)
-	})
+	err = RegisterPinFunc(
+		"GPIO4",
+		func() { player.Command(PREVIOUS) },
+		func() { slog.Info("TODO: implement me") },
+	)
 	if err != nil {
 		slog.Error("RegisterPinFunc failed", "err", err)
 		os.Exit(1)
 	}
-	err = RegisterPinFunc("GPIO23", func() {
-		player.Command(TOGGLE)
-	})
+	err = RegisterPinFunc(
+		"GPIO23",
+		func() { player.Command(TOGGLE) },
+		func() { slog.Info("TODO: implement me") },
+	)
 	if err != nil {
 		slog.Error("RegisterPinFunc failed", "err", err)
 		os.Exit(1)
 	}
-	err = RegisterPinFunc("GPIO24", func() {
-		player.Command(NEXT)
-	})
+	err = RegisterPinFunc(
+		"GPIO24",
+		func() { player.Command(NEXT) },
+		func() { slog.Info("TODO: implement me") },
+	)
 	if err != nil {
 		slog.Error("RegisterPinFunc failed", "err", err)
 		os.Exit(1)

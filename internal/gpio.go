@@ -3,6 +3,7 @@ package godible
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	"periph.io/x/conn/v3/gpio"
 	"periph.io/x/conn/v3/gpio/gpioreg"
@@ -51,18 +52,33 @@ func setupPinByGPIOName(gpioName string) (gpio.PinIO, error) {
 	return pinIO, nil
 }
 
-func callFuncOnPinEdge(pinIO gpio.PinIO, fn pinfunction) {
+func callFuncOnPinEdge(pinIO gpio.PinIO, fnShort pinfunction, fnLong pinfunction) {
 	for {
 		edgeDetected := pinIO.WaitForEdge(0)
 		if !edgeDetected {
 			slog.Error("this should not have happen ...")
 			continue
 		}
-		fn()
+
+		pressed_milliseconds := 0
+		for {
+			time.Sleep(5 * time.Millisecond)
+			pressed_milliseconds = pressed_milliseconds + 5
+			if !pinIO.Read() {
+				break
+			}
+			if pressed_milliseconds > 1500 {
+				fnLong()
+				return
+			}
+		}
+		slog.Debug("button pushed time", "milliseconds", pressed_milliseconds)
+
+		fnShort()
 	}
 }
 
-func RegisterPinFunc(gpioName string, fn pinfunction) error {
+func RegisterPinFunc(gpioName string, fnShort pinfunction, fnLong pinfunction) error {
 	pinIO, err := setupPinByGPIOName(gpioName)
 	if err != nil {
 		return err
@@ -73,9 +89,16 @@ func RegisterPinFunc(gpioName string, fn pinfunction) error {
 		return fmt.Errorf("gpio: could not gather current function for pin '%s'", pinIO.Name())
 	}
 
-	go callFuncOnPinEdge(pinIO, func() {
-		slog.Debug("call pinfunction", "gpioName", gpioName)
-		fn()
-	})
+	go callFuncOnPinEdge(
+		pinIO,
+		func() {
+			slog.Debug("call pinfunction (short)", "gpioName", gpioName)
+			fnShort()
+		},
+		func() {
+			slog.Debug("call pinfunction (long)", "gpioName", gpioName)
+			fnLong()
+		},
+	)
 	return nil
 }
