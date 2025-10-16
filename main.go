@@ -19,7 +19,6 @@ func main() {
 	}
 
 	err = RegisterPinFunc("GPIO4", func() {
-		slog.Debug("GPIO4: trigger PREVIOUS")
 		player.CommandChan <- PREVIOUS
 	})
 	if err != nil {
@@ -27,7 +26,6 @@ func main() {
 		os.Exit(1)
 	}
 	err = RegisterPinFunc("GPIO23", func() {
-		slog.Debug("GPIO23: trigger TOGGLE")
 		player.CommandChan <- TOGGLE
 	})
 	if err != nil {
@@ -35,7 +33,6 @@ func main() {
 		os.Exit(1)
 	}
 	err = RegisterPinFunc("GPIO24", func() {
-		slog.Debug("GPIO24: trigger NEXT")
 		player.CommandChan <- NEXT
 	})
 	if err != nil {

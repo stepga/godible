@@ -2,6 +2,7 @@ package godible
 
 import (
 	"fmt"
+	"log/slog"
 
 	"periph.io/x/conn/v3/gpio"
 	"periph.io/x/conn/v3/gpio/gpioreg"
@@ -60,7 +61,7 @@ func callFuncOnPinEdge(pinIO gpio.PinIO, fn pinfunction) {
 		//   - otherwise short press func
 		edgeDetected := pinIO.WaitForEdge(0)
 		if !edgeDetected {
-			fmt.Println("gpio (PinEdgeCallback): this should not have happen ...")
+			slog.Error("this should not have happen ...")
 			continue
 		}
 		fn()
@@ -79,6 +80,7 @@ func RegisterPinFunc(gpioName string, fn pinfunction) error {
 	}
 
 	go callFuncOnPinEdge(pinIO, func() {
+		slog.Debug("call pinfunction", "gpioName", gpioName)
 		fn()
 	})
 	return nil
