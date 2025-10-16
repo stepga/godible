@@ -19,36 +19,27 @@ func main() {
 	}
 
 	err = RegisterPinFunc("GPIO4", func() {
-		player.CommandChan <- PREVIOUS
+		player.Command(PREVIOUS)
 	})
 	if err != nil {
 		slog.Error("RegisterPinFunc failed", "err", err)
 		os.Exit(1)
 	}
 	err = RegisterPinFunc("GPIO23", func() {
-		player.CommandChan <- TOGGLE
+		player.Command(TOGGLE)
 	})
 	if err != nil {
 		slog.Error("RegisterPinFunc failed", "err", err)
 		os.Exit(1)
 	}
 	err = RegisterPinFunc("GPIO24", func() {
-		player.CommandChan <- NEXT
+		player.Command(NEXT)
 	})
 	if err != nil {
 		slog.Error("RegisterPinFunc failed", "err", err)
 		os.Exit(1)
 	}
-	go player.Run()
-
-	// TODO: web interface
-	//   - upload songs
-	//     - plain mp3/wav files
-	//     - directory with files
-	//   - restructure files/directories
-	//   - spotify (https://github.com/anisse/librespot-golang)
-
-	// TODO: usb webcam module && qr code recognition
+	go player.Play()
 
 	// block main goroutine forever
 	<-make(chan struct{})

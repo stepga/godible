@@ -8,26 +8,26 @@ import (
 	"os"
 )
 
-type AudioSource struct {
+type Track struct {
 	path     string
 	offset   int64  // io#Seeker.Seek
 	size     int64  // fs#fileinfo.Size
 	checksum []byte // hash#Hash.Sum
 }
 
-func (as *AudioSource) GetPath() string {
-	return as.path
+func (t *Track) GetPath() string {
+	return t.path
 }
 
-func (as *AudioSource) GetChecksum() []byte {
-	return as.checksum
+func (t *Track) GetChecksum() []byte {
+	return t.checksum
 }
 
-func (as *AudioSource) String() string {
-	if as == nil {
+func (t *Track) String() string {
+	if t == nil {
 		return "nil"
 	}
-	return fmt.Sprintf("{path: %s, offset: %d, size: %d, checksum: %x}", as.path, as.offset, as.size, as.checksum)
+	return fmt.Sprintf("{path: %s, offset: %d, size: %d, checksum: %x}", t.path, t.offset, t.size, t.checksum)
 }
 
 func isRegularFile(path string) (bool, error) {
@@ -59,7 +59,7 @@ func fileSize(path string) (int64, error) {
 	return fileinfo.Size(), nil
 }
 
-func NewAudioSource(path string) (*AudioSource, error) {
+func NewTrack(path string) (*Track, error) {
 	ok, err := isRegularFile(path)
 	if err != nil {
 		return nil, err
@@ -76,21 +76,21 @@ func NewAudioSource(path string) (*AudioSource, error) {
 	if err != nil {
 		return nil, err
 	}
-	as := AudioSource{
+	t := Track{
 		path:     path,
 		checksum: checksum,
 		size:     size,
 	}
-	return &as, nil
+	return &t, nil
 }
 
-// CreateAudioSourceList creates a list of AudioSources for all regular files
-// within the given root directory and its subdirectories of any level.
+// Creates a list of Tracks for all regular files within the given root
+// directory and its subdirectories of any level.
 //
 // The function returns any occuring error immediately.
-func CreateAudioSourceList(audioSourceList *list.List, root string) error {
-	if audioSourceList == nil {
-		audioSourceList = list.New()
+func CreateTrackList(tl *list.List, root string) error {
+	if tl == nil {
+		tl = list.New()
 	}
 	fileinfo, err := os.Stat(root)
 	if err != nil {
@@ -106,21 +106,19 @@ func CreateAudioSourceList(audioSourceList *list.List, root string) error {
 	for _, direntry := range direntries {
 		path := root + "/" + direntry.Name()
 		if direntry.IsDir() {
-			err := CreateAudioSourceList(audioSourceList, path)
+			err := CreateTrackList(tl, path)
 			if err != nil {
 				return err
 			}
 			continue
 		}
 		if direntry.Type().IsRegular() {
-			as, err := NewAudioSource(path)
+			t, err := NewTrack(path)
 			if err != nil {
 				return err
 			}
-			audioSourceList.PushBack(as)
+			tl.PushBack(t)
 		}
 	}
 	return nil
 }
-
-// TODO: implement recursive file/dir watch, e.g via https://github.com/fsnotify/fsnotify/issues/18#issuecomment-3109424560

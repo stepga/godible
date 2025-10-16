@@ -53,12 +53,6 @@ func setupPinByGPIOName(gpioName string) (gpio.PinIO, error) {
 
 func callFuncOnPinEdge(pinIO gpio.PinIO, fn pinfunction) {
 	for {
-		// TODO: detect long press
-		// - save pre state
-		// - on edge:
-		//   - loop (couple of ms sleep)
-		//   - if critical time achieved: trigger long press func (additional parameter)
-		//   - otherwise short press func
 		edgeDetected := pinIO.WaitForEdge(0)
 		if !edgeDetected {
 			slog.Error("this should not have happen ...")
