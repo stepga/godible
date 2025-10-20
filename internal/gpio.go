@@ -3,6 +3,7 @@ package godible
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	"periph.io/x/conn/v3/gpio"
 	"periph.io/x/conn/v3/gpio/gpioreg"
@@ -20,6 +21,11 @@ func initHostDrivers() error {
 	_, err := host.Init()
 	return err
 }
+
+const (
+	TICK_PERIOD                = time.Millisecond * 15
+	LONG_BUTTON_PRESS_DURATION = time.Millisecond * 1500
+)
 
 func getPinCurrentFunction(pinIO gpio.PinIO) error {
 	if pinIO == nil {
@@ -51,18 +57,44 @@ func setupPinByGPIOName(gpioName string) (gpio.PinIO, error) {
 	return pinIO, nil
 }
 
-func callFuncOnPinEdge(pinIO gpio.PinIO, fn pinfunction) {
+func callFuncOnPinEdgeAndPoll(pinIO gpio.PinIO, fnShort pinfunction, fnLong pinfunction) {
 	for {
 		edgeDetected := pinIO.WaitForEdge(0)
 		if !edgeDetected {
 			slog.Error("this should not have happen ...")
 			continue
 		}
-		fn()
+
+		// XXX: `deref ticker.Stop()` not needed:
+		// [...] As of Go 1.23, the garbage collector can recover
+		// unreferenced tickers even if they haven't been stopped.
+		ticker := time.NewTicker(TICK_PERIOD)
+
+		counter := 1
+		long_triggered := false
+		for range ticker.C {
+			if pinIO.Read() {
+				if long_triggered {
+					continue
+				}
+				counter = counter + 1
+				if counter*int(TICK_PERIOD) > int(LONG_BUTTON_PRESS_DURATION) {
+					slog.Debug("trigger long pinfunction")
+					fnLong()
+					long_triggered = true
+				}
+			} else {
+				if !long_triggered {
+					slog.Debug("trigger short pinfunction")
+					fnShort()
+				}
+				break
+			}
+		}
 	}
 }
 
-func RegisterPinFunc(gpioName string, fn pinfunction) error {
+func RegisterPinFunc(gpioName string, fnShort pinfunction, fnLong pinfunction) error {
 	pinIO, err := setupPinByGPIOName(gpioName)
 	if err != nil {
 		return err
@@ -73,9 +105,6 @@ func RegisterPinFunc(gpioName string, fn pinfunction) error {
 		return fmt.Errorf("gpio: could not gather current function for pin '%s'", pinIO.Name())
 	}
 
-	go callFuncOnPinEdge(pinIO, func() {
-		slog.Debug("call pinfunction", "gpioName", gpioName)
-		fn()
-	})
+	go callFuncOnPinEdgeAndPoll(pinIO, fnShort, fnLong)
 	return nil
 }

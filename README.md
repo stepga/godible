@@ -27,10 +27,11 @@
   * otherwise: reset the current track's offset.
 * implement recursive file/dir watch and update Player.audioSourceList
   * e.g via https://github.com/fsnotify/fsnotify/issues/18#issuecomment-3109424560
-* gpio: detect long press and implement other functions
-  * e.g. fast forward, poweroff, etc.
-  * counting time during WaitForEdge() does not work ... the straightforward attempt results in a broken gpio pin edge handling :-/
-  * ... loop goroutines on the other hand are ugly ...
+* gpio: implement long press functions
+  * fast forward,
+  * fast backword
+  * poweroff
+  * ... ?
 * web control interface
   * play/pause songs
   * save player state on /perm to survive reboots
