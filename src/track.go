@@ -13,6 +13,7 @@ type Track struct {
 	offset   int64  // io#Seeker.Seek
 	size     int64  // fs#fileinfo.Size
 	checksum []byte // hash#Hash.Sum
+	metadata *Metadata
 }
 
 func (t *Track) GetPath() string {
@@ -68,6 +69,10 @@ func NewTrack(path string) (*Track, error) {
 		return nil, fmt.Errorf("not a regular file: %s", path)
 	}
 
+	metadata, err := NewMetadata(path)
+	if err != nil {
+		return nil, err
+	}
 	checksum, err := fileChecksum(path)
 	if err != nil {
 		return nil, err
@@ -80,6 +85,7 @@ func NewTrack(path string) (*Track, error) {
 		path:     path,
 		checksum: checksum,
 		size:     size,
+		metadata: metadata,
 	}
 	return &t, nil
 }

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/anisse/alsa"
-	"github.com/go-audio/wav"
 )
 
 type CommandVal int
@@ -43,35 +42,9 @@ type Player struct {
 	playing bool
 }
 
-// a WAV file's metadata used for initializing alsa.NewPlayer
-type WavMetadata struct {
-	bytesPerSample int
-	sampleRate     int
-	channelNum     int
-}
-
 var cancelReasonNext = errors.New("next")
 var cancelReasonPrevious = errors.New("previous")
 var cancelReasonPause = errors.New("pause")
-
-func newWavMetadata(path string) (*WavMetadata, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	d := wav.NewDecoder(f)
-	d.ReadInfo()
-	err = d.Err()
-	if err != nil {
-		return nil, err
-	}
-	return &WavMetadata{
-		bytesPerSample: int(d.SampleBitDepth() / 8),
-		sampleRate:     int(d.SampleRate),
-		channelNum:     int(d.NumChans),
-	}, nil
-}
 
 func NewPlayer() (*Player, error) {
 	trackList := list.New()
@@ -127,18 +100,12 @@ func (player *Player) setCurrentNext() {
 func doPlay(ctx context.Context, t *Track) error {
 	slog.Debug("doPlay begin", "Track", t.String())
 
-	wavMetadata, err := newWavMetadata(t.path)
-	if err != nil {
-		return err
-	}
-	// XXX: alsaplayer discards mono wav files, but it seems to work anyways
-	channelNum := max(wavMetadata.channelNum, 2)
 	// XXX: keep bufferSizeInBytes to fixed 4kB for now
 	bufferSizeInBytes := 4096
 	alsaplayer, err := alsa.NewPlayer(
-		wavMetadata.sampleRate,
-		channelNum,
-		wavMetadata.bytesPerSample,
+		t.metadata.sampleRate,
+		t.metadata.channelNum,
+		t.metadata.bytesPerSample,
 		bufferSizeInBytes,
 	)
 	if err != nil {
@@ -146,25 +113,15 @@ func doPlay(ctx context.Context, t *Track) error {
 	}
 	defer alsaplayer.Close()
 
-	file, err := os.Open(t.path)
+	reader, err := NewTrackReader(t)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer reader.Close()
 
-	if t.offset != 0 {
-		_, err := file.Seek(t.offset, 0)
-		if err != nil {
-			return err
-		}
-		slog.Debug("continue paused title", "Track", t.String())
-	}
-
-	// alsaplayer.Write is not abortable/interruptable.
-	// io.Copy (as in copyctx.go of github.com/anisse/alsa) failed with 'short write' (always 2 bytes short)
-	// Therefore, our own WriteCtx is interruptable by introducing a
-	// contexed, oldschool, buffered write.
-	written_bytes, err := WriteCtx(ctx, alsaplayer, file)
+	// alsaplayer.Write is not abortable/interruptable. WriteCtx is
+	// interruptable by introducing a contexed and buffered write.
+	written_bytes, err := WriteCtx(ctx, alsaplayer, reader)
 	if err == context.Canceled && context.Cause(ctx) == cancelReasonPause {
 		t.offset = t.offset + written_bytes
 	} else {
