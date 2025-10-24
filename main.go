@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"os"
 
-	. "github.com/stepga/godible/internal"
+	. "github.com/stepga/godible/src"
 )
 
 func main() {
