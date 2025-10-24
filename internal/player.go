@@ -13,13 +13,6 @@ import (
 	"github.com/go-audio/wav"
 )
 
-const (
-	DATADIR      = "/perm/godible-data/"
-	CMD_TOGGLE   = "TOGGLE"
-	CMD_NEXT     = "NEXT"
-	CMD_PREVIOUS = "PREVIOUS"
-)
-
 type CommandVal int
 
 const (
@@ -27,6 +20,8 @@ const (
 	NEXT
 	PREVIOUS
 )
+
+const DATADIR = "/perm/godible-data/"
 
 type Player struct {
 	// commandMutex is needed to limit the concurrently executed commands
