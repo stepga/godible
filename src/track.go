@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 )
 
@@ -122,6 +123,10 @@ func CreateTrackList(tl *list.List, root string) error {
 			t, err := NewTrack(path)
 			if err != nil {
 				return err
+			}
+			if !sampleRateSupported(t.metadata.sampleRate) {
+				slog.Error("skip track due to unsupported sample rate", "path", t.path, "sample rate", t.metadata.sampleRate)
+				continue
 			}
 			tl.PushBack(t)
 		}

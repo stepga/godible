@@ -97,6 +97,17 @@ func (player *Player) setCurrentNext() {
 	}
 }
 
+func sampleRateSupported(sampleRate int) bool {
+	switch sampleRate {
+	case 44100:
+		return true
+	case 48000:
+		return true
+	default:
+		return false
+	}
+}
+
 func doPlay(ctx context.Context, t *Track) error {
 	slog.Debug("doPlay begin", "Track", t.String())
 

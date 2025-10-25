@@ -9,12 +9,6 @@
   * config `gzip -d /proc/config.gz -c  | less`
   * kernel parameters: `cat /proc/cmdline`
 
-## FIXMEs
-
-* Previous() does not work if there is a unsupported or broken file, as doPlay() immediately fails
-  * ... live with this for now, OR
-  * exclude the track from trackList if doPlay() fails n times?
-
 ## TODOs
 
 * support mp3/ogg
