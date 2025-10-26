@@ -2,11 +2,11 @@ package godible
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 
 	"github.com/go-audio/wav"
 	"github.com/h2non/filetype"
+	mp3 "github.com/hajimehoshi/go-mp3"
 )
 
 type AudioFileFormat int
@@ -32,24 +32,25 @@ func wavMetadata(f *os.File) (*Metadata, error) {
 	if err != nil {
 		return nil, err
 	}
-	numChans := d.NumChans
-	if numChans != 2 {
-		// XXX: alsaplayer discards mono wav files, but it seems to work anyways
-		slog.Info("number of channels is unsupported, try to enforce 2", "NumChans", d.NumChans)
-		numChans = 2
-	}
 	return &Metadata{
 		audioFormat:    WAV,
 		bytesPerSample: int(d.SampleBitDepth() / 8),
 		sampleRate:     int(d.SampleRate),
-		channelNum:     int(numChans),
+		channelNum:     2, // alsaplayer: enforce 2 channels, even for mono filesint(numChans),
 	}, nil
-
 }
 
 func mp3Metadata(f *os.File) (*Metadata, error) {
-	_ = f
-	return nil, fmt.Errorf("TODO: implement me")
+	dec, err := mp3.NewDecoder(f)
+	if err != nil {
+		return nil, err
+	}
+	return &Metadata{
+		audioFormat:    MP3,
+		bytesPerSample: 2, // enforce 2, as the bitdepth is a feature of uncompressed audio
+		sampleRate:     int(dec.SampleRate()),
+		channelNum:     2, // alsaplayer: enforce 2 channels, even for mono filesint(numChans),
+	}, nil
 }
 
 func oggMetadata(f *os.File) (*Metadata, error) {

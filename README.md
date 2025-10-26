@@ -11,9 +11,7 @@
 
 ## TODOs
 
-* support mp3/ogg
-  * transform to wav when upload, OR
-  * encode to wav during play
+* support ogg
 * add reading commands via unix socket for debugging
 * implement Previous() reset of currently played track
   * introduce a (percentage) threshold of the file being played
