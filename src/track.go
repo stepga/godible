@@ -122,10 +122,11 @@ func CreateTrackList(tl *list.List, root string) error {
 		if direntry.Type().IsRegular() {
 			t, err := NewTrack(path)
 			if err != nil {
-				return err
+				slog.Error("skip track", "path", path, "error", err)
+				continue
 			}
 			if !sampleRateSupported(t.metadata.sampleRate) {
-				slog.Error("skip track due to unsupported sample rate", "path", t.path, "sample rate", t.metadata.sampleRate)
+				slog.Error("skip track: unsupported sample rate", "path", t.path, "sample rate", t.metadata.sampleRate)
 				continue
 			}
 			tl.PushBack(t)

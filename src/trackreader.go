@@ -16,7 +16,7 @@ type TrackReader interface {
 
 func oggTrackReader(track *Track) (TrackReader, error) {
 	_ = track
-	return nil, fmt.Errorf("TODO: implement me")
+	return nil, fmt.Errorf("TODO: implement oggTrackReader")
 }
 
 type WavReader struct {

@@ -55,7 +55,7 @@ func mp3Metadata(f *os.File) (*Metadata, error) {
 
 func oggMetadata(f *os.File) (*Metadata, error) {
 	_ = f
-	return nil, fmt.Errorf("TODO: implement me")
+	return nil, fmt.Errorf("TODO: implement oggMetadata")
 }
 
 func detectAudioFileFormat(path string) (AudioFileFormat, error) {
