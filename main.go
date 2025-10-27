@@ -38,7 +38,8 @@ func main() {
 			player.Command(TOGGLE)
 		},
 		func() {
-			slog.Info("TODO: implement long toggle button")
+			slog.Info("rebooting device")
+			Reboot()
 		},
 	)
 

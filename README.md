@@ -22,8 +22,6 @@
 * gpio: implement long press functions
   * fast forward,
   * fast backword
-  * poweroff
-  * ... ?
 * web control interface
   * play/pause songs
   * save player state on /perm to survive reboots
@@ -33,7 +31,10 @@
   * decide: via button push or e.g. one webcam shot per second check?
   * see also https://github.com/makiuchi-d/gozxing
 * further circuitry stuff:
-  * phone connector (klinkenstecker) via gpio (the raspberry pi zero 2w does not have a dedicated phone connector)
+  * jack plug (klinkenstecker) via gpio (the raspberry pi zero 2w does not have a dedicated phone connector)
+    * https://learn.adafruit.com/adding-basic-audio-ouput-to-raspberry-pi-zero?view=all
+    * https://raspberrypi.stackexchange.com/questions/49600/how-to-output-audio-signals-through-gpio
+    * https://wiki.batocera.org/audio_via_gpio_rpi_only
   * flip switch for power off/on
   * webcam via usb
 * fritzing of the hardware setup
