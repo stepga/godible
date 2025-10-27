@@ -5,6 +5,7 @@ import (
 	"io"
 )
 
+// TODO: change src to io.ReadSeeker Interface?
 func WriteCtx(ctx context.Context, dst io.Writer, src io.Reader) (int64, error) {
 	byteBuffer := make([]byte, 1024)
 	bytesWrittenTotal := 0

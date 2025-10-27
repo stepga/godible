@@ -134,7 +134,11 @@ func doPlay(ctx context.Context, t *Track) error {
 	// interruptable by introducing a contexed and buffered write.
 	written_bytes, err := WriteCtx(ctx, alsaplayer, reader)
 	if err == context.Canceled && context.Cause(ctx) == cancelReasonPause {
-		t.offset = t.offset + written_bytes
+		if t.metadata.audioFormat == OGG {
+			t.offset = (t.offset + written_bytes) / int64(t.metadata.channelNum)
+		} else {
+			t.offset = t.offset + written_bytes
+		}
 	} else {
 		t.offset = 0
 	}

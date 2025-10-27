@@ -11,7 +11,7 @@
 
 ## TODOs
 
-* support ogg
+* change io.Reader to io.ReadSeeker interface in WriteCtx
 * add reading commands via unix socket for debugging
 * implement Previous() reset of currently played track
   * introduce a (percentage) threshold of the file being played

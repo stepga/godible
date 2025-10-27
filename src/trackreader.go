@@ -1,22 +1,19 @@
 package godible
 
 import (
-	"fmt"
+	"encoding/binary"
 	"log/slog"
+	"math"
 	"os"
 
 	mp3 "github.com/hajimehoshi/go-mp3"
+	"github.com/jfreymuth/oggvorbis"
 )
 
 type TrackReader interface {
 	Read(p []byte) (int, error)
 	Seek(offset int64, whence int) (int64, error)
 	Close() error
-}
-
-func oggTrackReader(track *Track) (TrackReader, error) {
-	_ = track
-	return nil, fmt.Errorf("TODO: implement oggTrackReader")
 }
 
 type WavReader struct {
@@ -89,11 +86,59 @@ func NewTrackReader(track *Track) (TrackReader, error) {
 		ret, err = wavTrackReader(track)
 	}
 	if err == nil && track.offset != 0 {
+		if track.offset > track.size {
+			slog.Error("continue track: offset larger than file size")
+		}
 		_, err := ret.Seek(track.offset, 0)
 		if err != nil {
 			return nil, err
 		}
-		slog.Debug("continue paused title", "Track", track.String())
+		slog.Debug("continue paused track", "Track", track.String())
 	}
 	return ret, err
+}
+
+type OggReader struct {
+	file    *os.File
+	decoder *oggvorbis.Reader
+}
+
+// borrowed from anisse/beatbox/ogg.go
+func (w OggReader) Read(p []byte) (n int, err error) {
+	fBuf := make([]float32, len(p)/2)
+	n, err = w.decoder.Read(fBuf)
+	for i := 0; i < n; i += 1 {
+		val := int16(fBuf[i] * math.MaxInt16)
+		binary.LittleEndian.PutUint16(p[i*2:], uint16(val))
+	}
+	return n * 2, err
+}
+
+func (w OggReader) Seek(offset int64, whence int) (int64, error) {
+	_ = whence
+	err := w.decoder.SetPosition(offset)
+	if err != nil {
+		return 0, err
+	}
+	return offset, nil
+}
+
+func (w OggReader) Close() error {
+	return w.file.Close()
+}
+
+func oggTrackReader(track *Track) (TrackReader, error) {
+	file, err := os.Open(track.path)
+	if err != nil {
+		return nil, err
+	}
+	dec, err := oggvorbis.NewReader(file)
+	if err != nil {
+		file.Close()
+		return nil, err
+	}
+	return OggReader{
+		file:    file,
+		decoder: dec,
+	}, nil
 }

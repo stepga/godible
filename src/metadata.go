@@ -7,6 +7,7 @@ import (
 	"github.com/go-audio/wav"
 	"github.com/h2non/filetype"
 	mp3 "github.com/hajimehoshi/go-mp3"
+	"github.com/jfreymuth/oggvorbis"
 )
 
 type AudioFileFormat int
@@ -54,8 +55,16 @@ func mp3Metadata(f *os.File) (*Metadata, error) {
 }
 
 func oggMetadata(f *os.File) (*Metadata, error) {
-	_ = f
-	return nil, fmt.Errorf("TODO: implement oggMetadata")
+	dec, err := oggvorbis.NewReader(f)
+	if err != nil {
+		return nil, err
+	}
+	return &Metadata{
+		audioFormat:    OGG,
+		bytesPerSample: 2, // enforce 2, as the bitdepth is a feature of uncompressed audio
+		sampleRate:     int(dec.SampleRate()),
+		channelNum:     2, // alsaplayer: enforce 2 channels, even for mono filesint(numChans),
+	}, nil
 }
 
 func detectAudioFileFormat(path string) (AudioFileFormat, error) {
