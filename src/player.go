@@ -115,7 +115,7 @@ func doPlay(ctx context.Context, t *Track) error {
 	bufferSizeInBytes := 4096
 	alsaplayer, err := alsa.NewPlayer(
 		t.metadata.sampleRate,
-		t.metadata.channelNum,
+		2, // anisse/alsa: enforce two channels, even for mono files
 		t.metadata.bytesPerSample,
 		bufferSizeInBytes,
 	)

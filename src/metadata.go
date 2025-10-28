@@ -37,7 +37,7 @@ func wavMetadata(f *os.File) (*Metadata, error) {
 		audioFormat:    WAV,
 		bytesPerSample: int(d.SampleBitDepth() / 8),
 		sampleRate:     int(d.SampleRate),
-		channelNum:     2, // alsaplayer: enforce 2 channels, even for mono filesint(numChans),
+		channelNum:     int(d.NumChans),
 	}, nil
 }
 
@@ -50,7 +50,10 @@ func mp3Metadata(f *os.File) (*Metadata, error) {
 		audioFormat:    MP3,
 		bytesPerSample: 2, // enforce 2, as the bitdepth is a feature of uncompressed audio
 		sampleRate:     int(dec.SampleRate()),
-		channelNum:     2, // alsaplayer: enforce 2 channels, even for mono filesint(numChans),
+		// go-mp3 NewDecoder: The stream is always formatted as 16bit
+		// (little endian) 2 channels even if the source is single
+		// channel MP3.
+		channelNum: 2,
 	}, nil
 }
 
@@ -63,7 +66,7 @@ func oggMetadata(f *os.File) (*Metadata, error) {
 		audioFormat:    OGG,
 		bytesPerSample: 2, // enforce 2, as the bitdepth is a feature of uncompressed audio
 		sampleRate:     int(dec.SampleRate()),
-		channelNum:     2, // alsaplayer: enforce 2 channels, even for mono filesint(numChans),
+		channelNum:     dec.Channels(),
 	}, nil
 }
 
