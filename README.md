@@ -26,7 +26,6 @@
   * save player state on /perm to survive reboots
   * upload songs
   * delete songs
-
 * add reading commands via unix socket for debugging
 * implement Previous() reset of currently played track
   * introduce a (percentage) threshold of the file being played
@@ -41,10 +40,19 @@
   * decide: via button push or e.g. one webcam shot per second check?
   * see also https://github.com/makiuchi-d/gozxing
 * further circuitry stuff:
+  * active boxes: amazn.so/RafE4l8
   * jack plug (klinkenstecker) via gpio (the raspberry pi zero 2w does not have a dedicated phone connector)
     * https://learn.adafruit.com/adding-basic-audio-ouput-to-raspberry-pi-zero?view=all
     * https://raspberrypi.stackexchange.com/questions/49600/how-to-output-audio-signals-through-gpio
     * https://wiki.batocera.org/audio_via_gpio_rpi_only
   * flip switch for power off/on
+    * on/off shim
+      * on pimorino itself https://shop.pimoroni.com/products/onoff-shim?variant=41102600138 (10EUR incl. tax)
+      * on reichelt 9EUR
+      * more soldering
+      * huge bash installer script needed for raspbian ... further checking out needed how this actually works
+    * self soldered flip-switch in usb cable between powerbank and raspberry?
+      * hard power cut sucks though
+      * https://www.instructables.com/OnOff-switch-for-a-USB-Powered-Device/
   * webcam via usb
 * fritzing of the hardware setup
