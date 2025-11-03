@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"container/list"
 	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"testing"
@@ -41,6 +42,16 @@ func listContainsPath(t *testing.T, fileList *list.List, path string) bool {
 	}
 }
 
+func minimalWavFile(t *testing.T) []byte {
+	// xxd -p -c0 wav.wav (wav.wav from https://github.com/mathiasbynens/small.git)
+	str := "524946462400000057415645666d7420100000000100010044ac000088580100020010006461746100000000"
+	enc, err := hex.DecodeString(str)
+	if err != nil {
+		t.Fatalf("encoding test file content failed")
+	}
+	return enc
+}
+
 func TestFileList(t *testing.T) {
 	tmpBaseDir := t.TempDir()
 	err := os.MkdirAll(tmpBaseDir+"/d/dd/ddd/dddd/ddddd", 0750)
@@ -48,15 +59,15 @@ func TestFileList(t *testing.T) {
 		t.Fatalf("creating test directories failed")
 	}
 	regFiles := []string{
-		"/f0",
-		"/f1",
-		"/d/f2",
-		"/d/f3",
-		"/d/dd/f4",
-		"/d/dd/f5",
-		"/d/dd/ddd/f6",
-		"/d/dd/ddd/f7",
-		"/d/dd/ddd/dddd/ddddd/f8",
+		"/f0.wav",
+		"/f1.wav",
+		"/d/f2.wav",
+		"/d/f3.wav",
+		"/d/dd/f4.wav",
+		"/d/dd/f5.wav",
+		"/d/dd/ddd/f6.wav",
+		"/d/dd/ddd/f7.wav",
+		"/d/dd/ddd/dddd/ddddd/f8.wav",
 	}
 	for _, subPath := range regFiles {
 		file, err := os.OpenFile(tmpBaseDir+subPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -64,7 +75,7 @@ func TestFileList(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer closeFile(t, file)
-		if _, err := file.Write([]byte(subPath)); err != nil {
+		if _, err := file.Write(minimalWavFile(t)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -72,7 +83,7 @@ func TestFileList(t *testing.T) {
 	fileList := list.New()
 	doTestFileList(t, fileList, tmpBaseDir)
 	if fileList.Len() != len(regFiles) {
-		t.Errorf("expected list with %d entries; got list with %d entries", fileList.Len(), len(regFiles))
+		t.Errorf("expected list with %d entries; got list with %d entries", len(regFiles), fileList.Len())
 	}
 	for _, file := range regFiles {
 		if !listContainsPath(t, fileList, tmpBaseDir+file) {
@@ -83,8 +94,8 @@ func TestFileList(t *testing.T) {
 
 func TestFileHashes(t *testing.T) {
 	tmpBaseDir := t.TempDir()
-	content := []byte("hello\n")
-	err := os.WriteFile(tmpBaseDir+"/file", content, 0644)
+	content := minimalWavFile(t)
+	err := os.WriteFile(tmpBaseDir+"/file.wav", content, 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +121,7 @@ func TestExoticPaths(t *testing.T) {
 		t.Fatalf("creating test directories failed")
 	}
 
-	content := []byte("hello\n")
+	content := minimalWavFile(t)
 	expectedPath := tmpBaseDir + path_str + "/file"
 	err = os.WriteFile(expectedPath, content, 0644)
 	if err != nil {
