@@ -1,9 +1,7 @@
 package godible
 
 import (
-	"bytes"
 	"container/list"
-	"crypto/sha256"
 	"encoding/hex"
 	"os"
 	"path/filepath"
@@ -89,26 +87,6 @@ func TestFileList(t *testing.T) {
 		if !listContainsPath(t, fileList, tmpBaseDir+file) {
 			t.Errorf("list did not contain: %s", tmpBaseDir+file)
 		}
-	}
-}
-
-func TestFileHashes(t *testing.T) {
-	tmpBaseDir := t.TempDir()
-	content := minimalWavFile(t)
-	err := os.WriteFile(tmpBaseDir+"/file.wav", content, 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
-	hash := sha256.New()
-	hash.Write(content)
-	expectedChecksum := hash.Sum(nil)
-
-	fileList := list.New()
-	doTestFileList(t, fileList, tmpBaseDir)
-	track, _ := fileList.Front().Value.(*Track)
-	isChecksum := track.GetChecksum()
-	if !bytes.Equal(expectedChecksum, isChecksum) {
-		t.Errorf("expected checksum to be %x, is %x", expectedChecksum, isChecksum)
 	}
 }
 

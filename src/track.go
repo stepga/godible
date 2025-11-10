@@ -2,18 +2,15 @@ package godible
 
 import (
 	"container/list"
-	"crypto/sha256"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 )
 
 type Track struct {
 	path     string
-	offset   int64  // io#Seeker.Seek
-	size     int64  // fs#fileinfo.Size
-	checksum []byte // hash#Hash.Sum
+	offset   int64 // io#Seeker.Seek
+	size     int64 // fs#fileinfo.Size
 	metadata *Metadata
 }
 
@@ -21,15 +18,11 @@ func (t *Track) GetPath() string {
 	return t.path
 }
 
-func (t *Track) GetChecksum() []byte {
-	return t.checksum
-}
-
 func (t *Track) String() string {
 	if t == nil {
 		return "nil"
 	}
-	return fmt.Sprintf("{path: %s, offset: %d, size: %d, checksum: %x}", t.path, t.offset, t.size, t.checksum)
+	return fmt.Sprintf("{path: %s, offset: %d, size: %d}", t.path, t.offset, t.size)
 }
 
 func isRegularFile(path string) (bool, error) {
@@ -38,19 +31,6 @@ func isRegularFile(path string) (bool, error) {
 		return false, err
 	}
 	return fileinfo.Mode().IsRegular(), nil
-}
-
-func fileChecksum(path string) ([]byte, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	h := sha256.New()
-	if _, err := io.Copy(h, file); err != nil {
-		return nil, err
-	}
-	return h.Sum(nil), nil
 }
 
 func fileSize(path string) (int64, error) {
@@ -74,17 +54,12 @@ func NewTrack(path string) (*Track, error) {
 	if err != nil {
 		return nil, err
 	}
-	checksum, err := fileChecksum(path)
-	if err != nil {
-		return nil, err
-	}
 	size, err := fileSize(path)
 	if err != nil {
 		return nil, err
 	}
 	t := Track{
 		path:     path,
-		checksum: checksum,
 		size:     size,
 		metadata: metadata,
 	}
