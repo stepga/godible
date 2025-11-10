@@ -56,5 +56,12 @@ func main() {
 		slog.Error("RegisterPinFunc failed", "err", err)
 		os.Exit(1)
 	}
+
+	err = InitHttpHandlers(player)
+	if err != nil {
+		slog.Error("InitHttpHandlers failed", "err", err)
+		os.Exit(1)
+	}
+
 	player.Play()
 }

@@ -29,9 +29,9 @@ type Player struct {
 	// currentMutex is needed as both the Command functions as well as the
 	// Play goroutine simultaneously access Player.current
 	currentMutex sync.Mutex
-	// trackList represents the files located in DATADIR. Currently, it is
+	// TrackList represents the files located in DATADIR. Currently, it is
 	// only created in NewPlayer and never updated.
-	trackList       *list.List
+	TrackList       *list.List
 	ctx             context.Context
 	cancelCauseFunc context.CancelCauseFunc
 	// current is currently played (or paused) Track
@@ -54,7 +54,7 @@ func NewPlayer() (*Player, error) {
 	}
 	slog.Debug("gathered files", "len", trackList.Len())
 	return &Player{
-		trackList:  trackList,
+		TrackList:  trackList,
 		current:    trackList.Front(),
 		playSignal: make(chan bool),
 	}, nil
@@ -81,7 +81,7 @@ func (player *Player) setCurrentPrevious() {
 		player.current = player.current.Prev()
 	}
 	if player.current == nil {
-		player.current = player.trackList.Back()
+		player.current = player.TrackList.Back()
 	}
 }
 
@@ -93,7 +93,7 @@ func (player *Player) setCurrentNext() {
 		player.current = player.current.Next()
 	}
 	if player.current == nil {
-		player.current = player.trackList.Front()
+		player.current = player.TrackList.Front()
 	}
 }
 
