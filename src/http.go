@@ -7,7 +7,7 @@ import (
 	"text/template"
 )
 
-var templates = template.Must(template.ParseFiles("/tmp/index.html", "/tmp/index_header.html"))
+var templates = template.Must(template.ParseFiles("/etc/godible/index.html", "/etc/godible/index_header.html"))
 var port = 1234
 
 type Row struct {
