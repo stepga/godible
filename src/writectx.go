@@ -6,28 +6,31 @@ import (
 )
 
 // TODO: change src to io.ReadSeeker Interface?
-func WriteCtx(ctx context.Context, dst io.Writer, src io.Reader) (int64, error) {
+func WriteCtx(ctx context.Context, dst io.Writer, src TrackReader, track *Track) error {
 	byteBuffer := make([]byte, 1024)
-	bytesWrittenTotal := 0
 
 	for {
 		select {
 		case <-ctx.Done():
-			return int64(bytesWrittenTotal), ctx.Err()
+			return ctx.Err()
 		default:
 			bytesRead, err := io.ReadFull(src, byteBuffer)
 			if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
-				return int64(bytesWrittenTotal), err
+				return err
 			}
 			if bytesRead == 0 {
-				return int64(bytesWrittenTotal), nil
+				return nil
 			}
 
-			bytesWritten, err := dst.Write(byteBuffer[:bytesRead])
+			_, err = dst.Write(byteBuffer[:bytesRead])
 			if err != nil {
-				return int64(bytesWrittenTotal), err
+				return err
 			}
-			bytesWrittenTotal = bytesWrittenTotal + bytesWritten
+
+			track.position, err = src.Position()
+			if err != nil {
+				return err
+			}
 		}
 	}
 }
