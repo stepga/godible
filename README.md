@@ -26,6 +26,7 @@
   * save player state on /perm to survive reboots
   * upload songs
   * delete songs
+  * progress bar https://codepen.io/djan/pen/wvwedP
 * add reading commands via unix socket for debugging
 * implement Previous() reset of currently played track
   * introduce a (percentage) threshold of the file being played
