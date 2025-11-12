@@ -130,17 +130,21 @@ func doPlay(ctx context.Context, t *Track) error {
 	}
 	defer reader.Close()
 
+	if t.paused {
+		_, err := reader.Seek(t.position, 0)
+		if err != nil {
+			return err
+		}
+		slog.Debug("continue paused track", "Track", t.String())
+	}
+
 	// alsaplayer.Write is not abortable/interruptable. WriteCtx is
 	// interruptable by introducing a contexed and buffered write.
-	written_bytes, err := WriteCtx(ctx, alsaplayer, reader)
+	err = WriteCtx(ctx, alsaplayer, reader, t)
 	if err == context.Canceled && context.Cause(ctx) == cancelReasonPause {
-		if t.metadata.audioFormat == OGG {
-			t.offset = (t.offset + written_bytes) / int64(t.metadata.channelNum)
-		} else {
-			t.offset = t.offset + written_bytes
-		}
+		t.paused = true
 	} else {
-		t.offset = 0
+		t.paused = false
 	}
 	return err
 }

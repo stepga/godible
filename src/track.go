@@ -9,20 +9,38 @@ import (
 
 type Track struct {
 	path     string
-	offset   int64 // io#Seeker.Seek
-	size     int64 // fs#fileinfo.Size
+	position int64
+	length   int64
 	metadata *Metadata
+	paused   bool
 }
 
 func (t *Track) GetPath() string {
+	if t == nil {
+		return ""
+	}
 	return t.path
+}
+
+func (t *Track) GetPosition() int64 {
+	if t == nil {
+		return -1
+	}
+	return t.position
+}
+
+func (t *Track) GetLength() int64 {
+	if t == nil {
+		return -1
+	}
+	return t.length
 }
 
 func (t *Track) String() string {
 	if t == nil {
 		return "nil"
 	}
-	return fmt.Sprintf("{path: %s, offset: %d, size: %d}", t.path, t.offset, t.size)
+	return fmt.Sprintf("{path: %s, position: %d, length: %d}", t.path, t.position, t.length)
 }
 
 func isRegularFile(path string) (bool, error) {
@@ -31,14 +49,6 @@ func isRegularFile(path string) (bool, error) {
 		return false, err
 	}
 	return fileinfo.Mode().IsRegular(), nil
-}
-
-func fileSize(path string) (int64, error) {
-	fileinfo, err := os.Stat(path)
-	if err != nil {
-		return 0, err
-	}
-	return fileinfo.Size(), nil
 }
 
 func NewTrack(path string) (*Track, error) {
@@ -54,15 +64,22 @@ func NewTrack(path string) (*Track, error) {
 	if err != nil {
 		return nil, err
 	}
-	size, err := fileSize(path)
-	if err != nil {
-		return nil, err
-	}
 	t := Track{
 		path:     path,
-		size:     size,
 		metadata: metadata,
 	}
+
+	reader, err := NewTrackReader(&t)
+	if err == nil {
+		t.length, err = reader.Length()
+	}
+	if err != nil {
+		slog.Error("failed to gather track's length", "err", err)
+	}
+	if reader != nil {
+		reader.Close()
+	}
+
 	return &t, nil
 }
 
