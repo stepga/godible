@@ -1,9 +1,165 @@
 <!DOCTYPE html>
 
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
 <style>
+
+.slidecontainer {
+	width: 100%;
+}
+
+.slider {
+	-webkit-appearance: none;
+	width: 100%;
+	height: 25px;
+	background: lightgray;
+	outline: none;
+	opacity: 0.7;
+	-webkit-transition: .2s;
+	transition: opacity .2s;
+}
+
+.slider:hover {
+	opacity: 1;
+}
+
+.slider::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 25px;
+	height: 25px;
+	background: darkseagreen;
+	cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+	width: 25px;
+	height: 25px;
+	background: darkslategray;
+	cursor: pointer;
+}
+
+.wrapper {
+	display: flex;
+	flex-flow: row wrap;
+	font-weight: bold;
+	text-align: center;
+	align-items: center;
+	justify-content: center;
+}
+
+.wrapper > * {
+	padding: 10px;
+	flex: 1 100%;
+}
+
+.header {
+	background: tomato;
+}
+
+.footer {
+	background: lightgreen;
+}
+
+
+.aside-1 {
+	background: gold;
+}
+
+.aside-2 {
+	background: deepskyblue;
+}
+
+.aside-3 {
+	background: hotpink;
+}
+
+@media all and (min-width: 600px) {
+	.aside { flex: 1 0 0; }
+}
+
+@media all and (min-width: 800px) {
+	.aside-1 { order: 1; }
+	.aside-2 { order: 2; }
+	.aside-3 { order: 3; }
+	.footer  { order: 4; }
+}
+
+body {
+	padding: 1em;
+}
 </style>
 
 <h1>Lauschkasten</h1>
+
+
+<div class="wrapper">
+	<header class="header">
+
+		<p>Current Title: XXX</p>
+		<div class="slidecontainer">
+			<input type="range" min="1" max="100" value="50" class="slider" id="myRange">
+		</div>
+
+
+	</header>
+
+	<aside class="aside aside-1">
+		<button type="button" style="width: 20%; height: 20%;" aria-label="Reveal navigation">
+			<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+				<style
+				type="text/css"
+				id="current-color-scheme">
+				.ColorScheme-Text {
+					color:#232629;
+				}
+				</style>
+				<path d="M0 6v20h4V6zm18 10l14 10V6zM4 16l14 10V6z" class="ColorScheme-Text" fill="currentColor"/>
+			</svg>
+		</button>
+	</aside>
+
+	<aside class="aside aside-2">
+		<button type="button" style="width: 20%; height: 20%;" aria-label="Reveal navigation">
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+				<defs
+					id="defs3051">
+					<style
+					type="text/css"
+					id="current-color-scheme">
+					.ColorScheme-Text {
+					color:#232629;
+					}
+					</style>
+				</defs>
+				<path
+					style="fill:currentColor;fill-opacity:1;stroke:none"
+					d="m 6 6 0 20 20 -10 z"
+					id="path105"
+					class="ColorScheme-Text"
+				/>
+			</svg>
+		</button>
+	</aside>
+
+	<aside class="aside aside-3">
+		<button type="button" style="width: 20%; height: 20%;" aria-label="Reveal navigation">
+			<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+				<style
+				type="text/css"
+				id="current-color-scheme">
+				.ColorScheme-Text {
+				color:#232629;
+				}
+				</style>
+				<path d="M32 6v20h-4V6zM14 16L0 26V6zm14 0L14 26V6z" class="ColorScheme-Text" fill="currentColor"/>
+			</svg>
+		</button>
+	</aside>
+	<footer class="footer">AA:BB (CC:DD)</footer>
+</div>
+
+<p>Slider Value: <span id="demo"></span></p>
 
 <form>
 	<input id="input-text" type="text">
@@ -11,6 +167,14 @@
 </form>
 
 <script type="text/javascript">
+
+var slider = document.getElementById("myRange");
+var output = document.getElementById("demo");
+output.innerHTML = slider.value;
+
+slider.oninput = function() {
+	output.innerHTML = this.value;
+}
 
 const newpageButton = document.querySelector('#input-button');
 const newpageText = document.querySelector('#input-text');
@@ -33,17 +197,17 @@ function click_action() {
 }
 
 async function getData() {
-  const url = "http://localhost:1234/state";
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Response status: ${response.status}`);
-    }
+	const url = "http://localhost:1234/state";
+	try {
+		const response = await fetch(url);
+		if (!response.ok) {
+			throw new Error(`Response status: ${response.status}`);
+		}
 
-    const result = await response.json();
-    console.log(result);
-  } catch (error) {
-    console.error(error.message);
-  }
+		const result = await response.json();
+		console.log(result);
+	} catch (error) {
+		console.error(error.message);
+	}
 }
 </script>
