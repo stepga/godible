@@ -1,6 +1,7 @@
 package godible
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -8,7 +9,10 @@ import (
 	"text/template"
 )
 
-var templates = template.Must(template.ParseFiles("/etc/godible/index.html", "/etc/godible/index_header.html"))
+//go:embed assets/*
+var assetsFS embed.FS
+
+var templates = template.Must(template.ParseFS(assetsFS, "assets/index.html", "assets/index_header.html"))
 var port = 1234
 
 type Row struct {
