@@ -4,6 +4,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"log/slog"
 	"net/http"
 	"text/template"
@@ -96,6 +97,45 @@ func (p *PlayerHandlerPassthrough) stateHandler(w http.ResponseWriter, r *http.R
 		fmt.Fprintf(w, "only GET and POST supported")
 	}
 }
+
+var upgrader = websocket.Upgrader{
+	// XXX: Currently, CheckOrigin in Upgrader allows all connections.
+	// TODO: Check r.Host or r.Header[Origin]?
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
+
+// TODO: implement ping/pong feature (c.f. https://github.com/gorilla/websocket/blob/main/examples/filewatch/main.go#L73)
+func (p *PlayerHandlerPassthrough) wsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		fmt.Fprintf(w, "only GET and POST supported")
+		return
+	}
+
+	connection, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		slog.Error("ws upgrade err", "err", err)
+		return
+	}
+	defer connection.Close()
+
+	for {
+		messageType, message, err := connection.ReadMessage()
+		if err != nil {
+			slog.Error("ws read err", "err", err)
+			break
+		}
+		slog.Info("ws recv", "message", message)
+		err = connection.WriteMessage(messageType, message)
+		if err != nil {
+			slog.Error("ws write err", "err", err)
+			break
+		}
+	}
+}
+
 func assetsFileServer(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
@@ -113,9 +153,10 @@ func InitHttpHandlers(p *Player) error {
 	phPassthrough := &PlayerHandlerPassthrough{player: p}
 	http.HandleFunc("/", phPassthrough.rootHandler)
 	http.HandleFunc("/state", phPassthrough.stateHandler)
+	http.HandleFunc("/ws", phPassthrough.wsHandler)
 
 	go func() {
-		address := fmt.Sprintf(":%d", port)
+		address := fmt.Sprintf("0.0.0.0:%d", port)
 		slog.Info("listen on ", "address", address)
 		err := http.ListenAndServe(address, nil)
 		slog.Error("ListenAndServe failed", "address", address, "error", err)

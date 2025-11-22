@@ -5,6 +5,7 @@ go 1.24.3
 require (
 	github.com/anisse/alsa v0.0.0-20190130210209-592d9b53603e
 	github.com/go-audio/wav v1.1.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/h2non/filetype v1.1.3
 	github.com/hajimehoshi/go-mp3 v0.3.4
 	github.com/jfreymuth/oggvorbis v1.0.5
