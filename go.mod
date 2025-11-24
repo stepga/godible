@@ -16,5 +16,6 @@ require (
 require (
 	github.com/go-audio/audio v1.0.0 // indirect
 	github.com/go-audio/riff v1.0.0 // indirect
+	github.com/hcl/audioduration v0.0.0-20221028095105-c8039191ae43 // indirect
 	github.com/jfreymuth/vorbis v1.0.2 // indirect
 )

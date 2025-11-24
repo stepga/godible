@@ -65,20 +65,36 @@ func (p *PlayerHandlerPassthrough) rootHandler(w http.ResponseWriter, r *http.Re
 }
 
 type State struct {
-	IsPlaying bool   `json:"is_playing"`
-	Name      string `json:"name"`
-	Position  int64  `json:"position"`
-	Length    int64  `json:"length"`
+	IsPlaying       bool   `json:"is_playing"`
+	Name            string `json:"name"`
+	Position        int64  `json:"position"`
+	Length          int64  `json:"length"`
+	Duration        int64  `json:"duration"`
+	DurationCurrent int64  `json:"duration_current"`
 }
 
 func (p *PlayerHandlerPassthrough) stateHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
+		current := p.player.getCurrent()
+		name := current.GetPath()
+		position := current.GetPosition()
+		length := current.GetLength()
+		duration := current.GetDuration()
+		durationCurrent := duration
+		if length > 0 {
+			var tmp float64 = float64(position) / float64(length)
+			tmp = tmp * float64(durationCurrent)
+			durationCurrent = int64(tmp)
+		}
+
 		state := &State{
-			IsPlaying: p.player.playing,
-			Name:      p.player.getCurrent().GetPath(),
-			Position:  p.player.getCurrent().GetPosition(),
-			Length:    p.player.getCurrent().GetLength(),
+			IsPlaying:       p.player.playing,
+			Name:            name,
+			Position:        position,
+			Length:          length,
+			Duration:        duration,
+			DurationCurrent: durationCurrent,
 		}
 		j, _ := json.Marshal(state)
 		w.Write(j)

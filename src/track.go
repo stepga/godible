@@ -11,6 +11,7 @@ type Track struct {
 	path     string
 	position int64
 	length   int64
+	duration int64
 	metadata *Metadata
 	paused   bool
 }
@@ -34,6 +35,13 @@ func (t *Track) GetLength() int64 {
 		return -1
 	}
 	return t.length
+}
+
+func (t *Track) GetDuration() int64 {
+	if t == nil {
+		return -1
+	}
+	return t.duration
 }
 
 func (t *Track) String() string {
@@ -72,12 +80,10 @@ func NewTrack(path string) (*Track, error) {
 	reader, err := NewTrackReader(&t)
 	if err == nil {
 		t.length, err = reader.Length()
-	}
-	if err != nil {
-		slog.Error("failed to gather track's length", "err", err)
-	}
-	if reader != nil {
+		t.duration, err = reader.Duration()
 		reader.Close()
+	} else {
+		slog.Error("failed to gather track's length", "err", err)
 	}
 
 	return &t, nil
