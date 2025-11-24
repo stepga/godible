@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 window.addEventListener("load", function(evt) {
 	var output = document.getElementById("output");
 	var input = document.getElementById("input");
-	var ws;
+	var ws = new WebSocket("ws://"+window.location.host+"/ws");
 
 	var print = function(message) {
 		var d = document.createElement("div");
@@ -52,41 +52,39 @@ window.addEventListener("load", function(evt) {
 		output.scroll(0, output.scrollHeight);
 	};
 
-	document.getElementById("open").onclick = function(evt) {
+	print("WebSocket init; state: " + ws.readyState)
+
+	ws.onmessage = function(evt) {
+		print("WebSocket response: " + evt.data);
+	}
+	ws.onerror = function(evt) {
+		print("WebSocket error: " + evt.data);
+	}
+
+	document.getElementById("reset").onclick = function(evt) {
 		if (ws) {
-			return false;
+			ws.close();
 		}
 		ws = new WebSocket("ws://"+window.location.host+"/ws");
-		ws.onopen = function(evt) {
-			print("OPEN");
-		}
-		ws.onclose = function(evt) {
-			print("CLOSE");
-			ws = null;
-		}
+		print("WebSocket reset; state: " + ws.readyState)
+
 		ws.onmessage = function(evt) {
-			print("RESPONSE: " + evt.data);
+			print("WebSocket response: " + evt.data);
 		}
 		ws.onerror = function(evt) {
-			print("ERROR: " + evt.data);
+			print("WebSocket error: " + evt.data);
 		}
+
 		return false;
-	};
+	}
 
 	document.getElementById("send").onclick = function(evt) {
 		if (!ws) {
+			print("WebSocket failed: ws null");
 			return false;
 		}
-		print("SEND: " + input.value);
+		print("WebSocket send: " + input.value);
 		ws.send(input.value);
-		return false;
-	};
-
-	document.getElementById("close").onclick = function(evt) {
-		if (!ws) {
-			return false;
-		}
-		ws.close();
 		return false;
 	};
 });

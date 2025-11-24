@@ -4,10 +4,12 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"log/slog"
 	"net/http"
 	"text/template"
+	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 //go:embed assets/*
@@ -46,12 +48,6 @@ func renderTemplate(w http.ResponseWriter, filename string, r *Row) {
 func (p *PlayerHandlerPassthrough) rootHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "header", nil)
 	renderTemplate(w, "body", nil)
-	// TODO: render this in a nice table with the possibility to highlight
-	// the currently played track and even show and change the position
-	// e.g. via 20 horizontally aligned css buttons (each button 5%) and
-	// disabling the left-over buttons
-	// - https://www.w3schools.com/css/css3_buttons.asp
-	// - https://css-tricks.com/snippets/css/a-guide-to-flexbox/
 	if p.player == nil || p.player.TrackList == nil {
 		return
 	}
@@ -122,8 +118,58 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+func (p *PlayerHandlerPassthrough) wsReader(conn *websocket.Conn) {
+	for {
+		slog.Debug("XXX new wsRead loop wait")
+		messageType, message, err := conn.ReadMessage()
+		if err != nil {
+			slog.Error("wsReader err", "err", err)
+			break
+		}
+		slog.Info("wsReader recv", "message", message)
+		err = conn.WriteMessage(messageType, message)
+		if err != nil {
+			slog.Error("wsReader reply err", "err", err)
+			break
+		}
+	}
+}
+
+func (p *PlayerHandlerPassthrough) wsWriter(conn *websocket.Conn) {
+	// Time allowed to write the message to the client.
+	writeWait := 500 * time.Millisecond
+	sendPeriod := 500 * time.Millisecond
+	pingPeriod := 250 * time.Millisecond
+
+	sendTicker := time.NewTicker(sendPeriod)
+	pingTicker := time.NewTicker(pingPeriod)
+	defer func() {
+		sendTicker.Stop()
+		pingTicker.Stop()
+		conn.Close()
+	}()
+
+	for {
+		select {
+		case <-sendTicker.C:
+			conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := conn.WriteMessage(websocket.TextMessage, []byte("XXX "+conn.RemoteAddr().String())); err != nil {
+				return
+			}
+		// TODO: test the pingTicker ... is this useful at all?
+		case <-pingTicker.C:
+			conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+				slog.Error("XXX ping timeout?", "err", err)
+				return
+			}
+		}
+	}
+}
+
 // TODO: implement ping/pong feature (c.f. https://github.com/gorilla/websocket/blob/main/examples/filewatch/main.go#L73)
 func (p *PlayerHandlerPassthrough) wsHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("XXX init new wsHandler")
 	if r.Method != "GET" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		fmt.Fprintf(w, "only GET and POST supported")
@@ -137,19 +183,9 @@ func (p *PlayerHandlerPassthrough) wsHandler(w http.ResponseWriter, r *http.Requ
 	}
 	defer connection.Close()
 
-	for {
-		messageType, message, err := connection.ReadMessage()
-		if err != nil {
-			slog.Error("ws read err", "err", err)
-			break
-		}
-		slog.Info("ws recv", "message", message)
-		err = connection.WriteMessage(messageType, message)
-		if err != nil {
-			slog.Error("ws write err", "err", err)
-			break
-		}
-	}
+	go p.wsWriter(connection)
+
+	p.wsReader(connection)
 }
 
 func assetsFileServer(w http.ResponseWriter, r *http.Request) {
