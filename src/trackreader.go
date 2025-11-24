@@ -6,7 +6,9 @@ import (
 	"math"
 	"os"
 
+	wav "github.com/go-audio/wav"
 	mp3 "github.com/hajimehoshi/go-mp3"
+	"github.com/hcl/audioduration"
 	"github.com/jfreymuth/oggvorbis"
 )
 
@@ -16,10 +18,12 @@ type TrackReader interface {
 	Close() error
 	Position() (int64, error)
 	Length() (int64, error)
+	Duration() (int64, error)
 }
 
 type WavReader struct {
-	file *os.File
+	file    *os.File
+	decoder *wav.Decoder
 }
 
 func (w WavReader) Read(p []byte) (n int, err error) {
@@ -46,12 +50,21 @@ func (w WavReader) Length() (int64, error) {
 	return fi.Size(), nil
 }
 
+func (w WavReader) Duration() (int64, error) {
+	ret, err := w.decoder.Duration()
+	return int64(ret.Seconds()), err
+}
+
 func wavTrackReader(track *Track) (TrackReader, error) {
 	file, err := os.Open(track.path)
 	if err != nil {
 		return nil, err
 	}
-	return WavReader{file: file}, nil
+	dec := wav.NewDecoder(file)
+	return WavReader{
+		file:    file,
+		decoder: dec,
+	}, nil
 }
 
 type Mp3Reader struct {
@@ -77,6 +90,13 @@ func (m Mp3Reader) Position() (int64, error) {
 
 func (m Mp3Reader) Length() (int64, error) {
 	return m.decoder.Length(), nil
+}
+
+func (m Mp3Reader) Duration() (int64, error) {
+	var sampleSize int64 = 4 // From documentation: "The stream is always formatted as 16bit (little endian) 2 channels"
+	length, _ := m.Length()
+	samples := length / sampleSize
+	return samples / int64(m.decoder.SampleRate()), nil
 }
 
 func mp3TrackReader(track *Track) (TrackReader, error) {
@@ -131,6 +151,11 @@ func (o OggReader) Position() (int64, error) {
 
 func (o OggReader) Length() (int64, error) {
 	return o.decoder.Length(), nil
+}
+
+func (o OggReader) Duration() (int64, error) {
+	ret, err := audioduration.Duration(o.file, audioduration.TypeOgg)
+	return int64(ret), err
 }
 
 func oggTrackReader(track *Track) (TrackReader, error) {
