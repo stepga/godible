@@ -1,90 +1,81 @@
-function click_action() {
-	//if (!newpageText.value || newpageText.value.length === 0) {
-	//	console.log("input action: nothing to do, value is missing")
-	//	return;
-	//}
-	getData()
+var time_current_lock = false;
+
+const pause_html = '<embed src="img/Font_Awesome_5_regular_pause-circle.svg">';
+const play_html = '<embed src="img/Font_Awesome_5_regular_play-circle.svg">';
+
+function secondsToDateStr(seconds) {
+	var date = new Date(null);
+	date.setSeconds(seconds);
+	if (seconds < 60*60) {
+		return date.toISOString().slice(14, 19);
+	}
+	return date.toISOString().slice(11, 19);
 }
 
-async function getData() {
-	const url = "http://localhost:1234/state";
-	try {
-		const response = await fetch(url);
-		if (!response.ok) {
-			throw new Error(`Response status: ${response.status}`);
-		}
+function updateUI(data) {
+	var json = JSON.parse(data);
+	var title = document.getElementById("title");
+	var time_current = document.getElementById("time_current");
+	var time_total = document.getElementById("time_total");
+	var slider = document.getElementById("slider");
 
-		const result = await response.json();
-		console.log(result);
-	} catch (error) {
-		console.error(error.message);
+	title.textContent = json.name;
+	time_total.textContent = secondsToDateStr(json.duration);
+	slider.max = json.duration;
+	if (time_current_lock == false) {
+		time_current.textContent = secondsToDateStr(json.duration_current);
+		slider.value = json.duration_current;
+	}
+
+	var toggle = document.getElementById("toggle");
+	if (json.is_playing == true) {
+		if (toggle.innerHTML.toString() != pause_html) {
+			toggle.innerHTML = pause_html;
+		}
+	} else {
+		if (toggle.innerHTML.toString() != play_html) {
+			toggle.innerHTML = play_html;
+		}
 	}
 }
 
 document.addEventListener("DOMContentLoaded", function(event) {
-	var slider = document.getElementById("myRange");
-	var output = document.getElementById("demo");
-	output.innerHTML = slider.value;
+	var websocket = new WebSocket("ws://"+window.location.host+"/ws");
+	websocket.onmessage = function(event) {
+		console.log("XXX message received: " + event.data)
+		updateUI(event.data);
+	}
+	websocket.onerror = function(event) {
+		console.log("WebSocket error: " + event.data);
+	}
+
+	var slider = document.getElementById("slider");
 	slider.oninput = function() {
-		output.innerHTML = this.value;
+		const time_current = document.getElementById("time_current");
+		time_current.textContent = secondsToDateStr(slider.value);
+	}
+	slider.onmousedown = function() {
+		time_current_lock = true;
+		console.log("disable automatic time_current updates due to slider action");
+	}
+	slider.onmouseup = function() {
+		time_current_lock = false;
+		console.log("reenable automatic time_current updates");
 	}
 
-	const newpageButton = document.querySelector('#input-button');
-	const newpageText = document.querySelector('#input-text');
-	newpageText.addEventListener("keydown", function(event) {
-		if (event.keyCode === 13) { // 13 == 0x0d == CR (ASCII) == Enter
-			event.preventDefault();
-			newpageButton.click();
-		}
+	document.getElementById("previous").addEventListener('click', function() {
+		console.log("XXX previous");
+		websocket.send('{ "command": "previous", "payload": ""}');
 	});
-	newpageButton.addEventListener('click', click_action);
+	document.getElementById("toggle").addEventListener('click', function() {
+		console.log("XXX toggle");
+		websocket.send('{ "command": "toggle", "payload": ""}');
+	});
+	document.getElementById("next").addEventListener('click', function() {
+		console.log("XXX next");
+		websocket.send('{ "command": "next", "payload": ""}');
+	});
 });
 
-window.addEventListener("load", function(evt) {
-	var output = document.getElementById("output");
-	var input = document.getElementById("input");
-	var ws = new WebSocket("ws://"+window.location.host+"/ws");
 
-	var print = function(message) {
-		var d = document.createElement("div");
-		d.textContent = message;
-		output.appendChild(d);
-		output.scroll(0, output.scrollHeight);
-	};
 
-	print("WebSocket init; state: " + ws.readyState)
-
-	ws.onmessage = function(evt) {
-		print("WebSocket response: " + evt.data);
-	}
-	ws.onerror = function(evt) {
-		print("WebSocket error: " + evt.data);
-	}
-
-	document.getElementById("reset").onclick = function(evt) {
-		if (ws) {
-			ws.close();
-		}
-		ws = new WebSocket("ws://"+window.location.host+"/ws");
-		print("WebSocket reset; state: " + ws.readyState)
-
-		ws.onmessage = function(evt) {
-			print("WebSocket response: " + evt.data);
-		}
-		ws.onerror = function(evt) {
-			print("WebSocket error: " + evt.data);
-		}
-
-		return false;
-	}
-
-	document.getElementById("send").onclick = function(evt) {
-		if (!ws) {
-			print("WebSocket failed: ws null");
-			return false;
-		}
-		print("WebSocket send: " + input.value);
-		ws.send(input.value);
-		return false;
-	};
-});
