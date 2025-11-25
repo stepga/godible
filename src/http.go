@@ -1,6 +1,7 @@
 package godible
 
 import (
+	"bytes"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -60,7 +61,12 @@ func (p *PlayerHandlerPassthrough) rootHandler(w http.ResponseWriter, r *http.Re
 	}
 }
 
-type State struct {
+type HttpCommand struct {
+	Cmd     string `json:"command"`
+	Payload string `json:"payload"`
+}
+
+type HttpState struct {
 	IsPlaying       bool   `json:"is_playing"`
 	Name            string `json:"name"`
 	Position        int64  `json:"position"`
@@ -69,29 +75,37 @@ type State struct {
 	DurationCurrent int64  `json:"duration_current"`
 }
 
+func (p *PlayerHandlerPassthrough) state() *HttpState {
+	current := p.player.getCurrent()
+	if current == nil {
+		return nil
+	}
+
+	name := current.GetPath()
+	position := current.GetPosition()
+	length := current.GetLength()
+	duration := current.GetDuration()
+	durationCurrent := duration
+	if length > 0 {
+		var tmp float64 = float64(position) / float64(length)
+		tmp = tmp * float64(durationCurrent)
+		durationCurrent = int64(tmp)
+	}
+
+	return &HttpState{
+		IsPlaying:       p.player.playing,
+		Name:            name,
+		Position:        position,
+		Length:          length,
+		Duration:        duration,
+		DurationCurrent: durationCurrent,
+	}
+}
+
 func (p *PlayerHandlerPassthrough) stateHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		current := p.player.getCurrent()
-		name := current.GetPath()
-		position := current.GetPosition()
-		length := current.GetLength()
-		duration := current.GetDuration()
-		durationCurrent := duration
-		if length > 0 {
-			var tmp float64 = float64(position) / float64(length)
-			tmp = tmp * float64(durationCurrent)
-			durationCurrent = int64(tmp)
-		}
-
-		state := &State{
-			IsPlaying:       p.player.playing,
-			Name:            name,
-			Position:        position,
-			Length:          length,
-			Duration:        duration,
-			DurationCurrent: durationCurrent,
-		}
+		state := p.state()
 		j, _ := json.Marshal(state)
 		w.Write(j)
 	case "POST":
@@ -121,17 +135,29 @@ var upgrader = websocket.Upgrader{
 func (p *PlayerHandlerPassthrough) wsReader(conn *websocket.Conn) {
 	for {
 		slog.Debug("XXX new wsRead loop wait")
-		messageType, message, err := conn.ReadMessage()
+		//messageType, message, err := conn.ReadMessage()
+		_, message, err := conn.ReadMessage()
 		if err != nil {
 			slog.Error("wsReader err", "err", err)
 			break
 		}
-		slog.Info("wsReader recv", "message", message)
-		err = conn.WriteMessage(messageType, message)
+
+		decoder := json.NewDecoder(bytes.NewReader(message))
+		var cmd HttpCommand
+		err = decoder.Decode(&cmd)
 		if err != nil {
-			slog.Error("wsReader reply err", "err", err)
-			break
+			slog.Error("failed to decode message as HttpCommand", "message", message, "err", err)
+			continue
 		}
+		slog.Debug("XXX", "decoded cmd", cmd)
+
+		// TODO: handle commands
+
+		//err = conn.WriteMessage(messageType, message)
+		//if err != nil {
+		//	slog.Error("wsReader reply err", "err", err)
+		//	break
+		//}
 	}
 }
 
@@ -153,7 +179,8 @@ func (p *PlayerHandlerPassthrough) wsWriter(conn *websocket.Conn) {
 		select {
 		case <-sendTicker.C:
 			conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := conn.WriteMessage(websocket.TextMessage, []byte("XXX "+conn.RemoteAddr().String())); err != nil {
+			jsonstate, _ := json.Marshal(p.state())
+			if err := conn.WriteMessage(websocket.TextMessage, jsonstate); err != nil {
 				return
 			}
 		// TODO: test the pingTicker ... is this useful at all?
@@ -169,7 +196,6 @@ func (p *PlayerHandlerPassthrough) wsWriter(conn *websocket.Conn) {
 
 // TODO: implement ping/pong feature (c.f. https://github.com/gorilla/websocket/blob/main/examples/filewatch/main.go#L73)
 func (p *PlayerHandlerPassthrough) wsHandler(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("XXX init new wsHandler")
 	if r.Method != "GET" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		fmt.Fprintf(w, "only GET and POST supported")
@@ -184,7 +210,6 @@ func (p *PlayerHandlerPassthrough) wsHandler(w http.ResponseWriter, r *http.Requ
 	defer connection.Close()
 
 	go p.wsWriter(connection)
-
 	p.wsReader(connection)
 }
 
@@ -201,6 +226,7 @@ func assetsFileServer(w http.ResponseWriter, r *http.Request) {
 
 func InitHttpHandlers(p *Player) error {
 	http.HandleFunc("/css/", assetsFileServer)
+	http.HandleFunc("/img/", assetsFileServer)
 	http.HandleFunc("/js/", assetsFileServer)
 	phPassthrough := &PlayerHandlerPassthrough{player: p}
 	http.HandleFunc("/", phPassthrough.rootHandler)
