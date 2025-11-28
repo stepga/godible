@@ -12,7 +12,9 @@
 ## TODOs
 
 * web interface
-  * play/pause songs
+  * table format for track
+    * folding of directories
+    * columns with action buttons as: play, enqueue, delete ... further future features :-)
   * upload songs
     * update player's internal file list
   * delete songs
@@ -47,6 +49,8 @@
   * https://wiki.batocera.org/audio_via_gpio_rpi_only
 
 ## further feature ideas
+
+* implement websocket ping/ping as in https://github.com/gorilla/websocket/blob/main/examples/chat/home.html
 
 * implement recursive file/dir watch and update Player.audioSourceList
   * e.g via https://github.com/fsnotify/fsnotify/issues/18#issuecomment-3109424560

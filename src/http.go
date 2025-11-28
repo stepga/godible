@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"text/template"
 	"time"
 
@@ -108,19 +109,9 @@ func (p *PlayerHandlerPassthrough) stateHandler(w http.ResponseWriter, r *http.R
 		state := p.state()
 		j, _ := json.Marshal(state)
 		w.Write(j)
-	case "POST":
-		// TODO: implement me
-		//// Decode the JSON in the body and update the player/track state
-		//d := json.NewDecoder(r.Body)
-		//s := &State{}
-		//err := d.Decode(s)
-		//if err != nil {
-		//	http.Error(w, err.Error(), http.StatusInternalServerError)
-		//}
-		//...
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintf(w, "only GET and POST supported")
+		fmt.Fprintf(w, "only GET supported")
 	}
 }
 
@@ -140,6 +131,33 @@ func (p *PlayerHandlerPassthrough) handleCommand(cmd HttpCommand) {
 		p.player.Command(NEXT)
 	case "previous":
 		p.player.Command(PREVIOUS)
+	case "jump":
+		duration_current_to_set, err := strconv.Atoi(cmd.Payload)
+		if err != nil {
+			slog.Error("handleCommand jump can not convert payload to integer", "err", err)
+			return
+		}
+
+		track := p.player.getCurrent()
+		length := track.GetLength()
+		duration := track.GetDuration()
+
+		var position int64
+		position = 0
+		slog.Debug("XXX jump", "duration_current_to_set", duration_current_to_set, "length", length)
+		if duration != 0 {
+			div := float64(duration_current_to_set) / float64(duration)
+			position = int64(div * float64(length))
+			position = position - (position % 4)
+		}
+		slog.Debug("XXX jump", "position", position)
+		if p.player.playing {
+			p.player.Command(TOGGLE)
+			// FIXME: due to async nature of cancel functions we are waiting here as a quick fix ... try to do that more elegant)
+			time.Sleep(50 * time.Millisecond)
+		}
+		track.SetPosition(position)
+		p.player.Command(TOGGLE)
 	default:
 		slog.Error("unknown command", "cmd", cmd)
 	}
@@ -147,8 +165,6 @@ func (p *PlayerHandlerPassthrough) handleCommand(cmd HttpCommand) {
 
 func (p *PlayerHandlerPassthrough) wsReader(conn *websocket.Conn) {
 	for {
-		slog.Debug("XXX new wsRead loop wait")
-		//messageType, message, err := conn.ReadMessage()
 		_, message, err := conn.ReadMessage()
 		if err != nil {
 			slog.Error("wsReader err", "err", err)
@@ -163,49 +179,32 @@ func (p *PlayerHandlerPassthrough) wsReader(conn *websocket.Conn) {
 			continue
 		}
 		p.handleCommand(cmd)
-
-		//err = conn.WriteMessage(messageType, message)
-		//if err != nil {
-		//	slog.Error("wsReader reply err", "err", err)
-		//	break
-		//}
 	}
 }
 
 func (p *PlayerHandlerPassthrough) wsWriter(conn *websocket.Conn) {
 	// Time allowed to write the message to the client.
-	writeWait := 500 * time.Millisecond
-	sendPeriod := 500 * time.Millisecond
-	pingPeriod := 250 * time.Millisecond
+	writeWait := 100 * time.Millisecond
+	// Send messages to peer with this period. Must be less than writeWait.
+	sendPeriod := 75 * time.Millisecond
 
 	sendTicker := time.NewTicker(sendPeriod)
-	pingTicker := time.NewTicker(pingPeriod)
 	defer func() {
 		sendTicker.Stop()
-		pingTicker.Stop()
 		conn.Close()
 	}()
 
-	for {
-		select {
-		case <-sendTicker.C:
-			conn.SetWriteDeadline(time.Now().Add(writeWait))
-			jsonstate, _ := json.Marshal(p.state())
-			if err := conn.WriteMessage(websocket.TextMessage, jsonstate); err != nil {
-				return
-			}
-		// TODO: test the pingTicker ... is this useful at all?
-		case <-pingTicker.C:
-			conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
-				slog.Error("XXX ping timeout?", "err", err)
-				return
-			}
+	for range sendTicker.C {
+		conn.SetWriteDeadline(time.Now().Add(writeWait))
+		jsonstate, _ := json.Marshal(p.state())
+		err := conn.WriteMessage(websocket.TextMessage, jsonstate)
+		if err != nil {
+			slog.Error("writing state via websocket connection failed", "jsonstate", jsonstate, "err", err)
+			return
 		}
 	}
 }
 
-// TODO: implement ping/pong feature (c.f. https://github.com/gorilla/websocket/blob/main/examples/filewatch/main.go#L73)
 func (p *PlayerHandlerPassthrough) wsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -231,7 +230,7 @@ func assetsFileServer(w http.ResponseWriter, r *http.Request) {
 		http.ServeFileFS(w, r, assetsFS, "assets"+r.URL.Path)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintf(w, "only GET and POST supported")
+		fmt.Fprintf(w, "only GET supported")
 	}
 }
 
@@ -252,17 +251,3 @@ func InitHttpHandlers(p *Player) error {
 	}()
 	return nil
 }
-
-// XXX: debugging embed.FS (source https://gist.github.com/clarkmcc/1fdab4472283bb68464d066d6b4169bc?permalink_comment_id=4405804#gistcomment-4405804)
-//func getAllFilenames(efs *embed.FS) (files []string, err error) {
-//	if err := fs.WalkDir(efs, ".", func(path string, d fs.DirEntry, err error) error {
-//		if d.IsDir() {
-//			return nil
-//		}
-//		files = append(files, path)
-//		return nil
-//	}); err != nil {
-//		return nil, err
-//	}
-//	return files, nil
-//}

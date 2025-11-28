@@ -44,6 +44,17 @@ func (t *Track) GetDuration() int64 {
 	return t.duration
 }
 
+func (t *Track) SetPosition(pos int64) int64 {
+	if t == nil {
+		return -1
+	}
+	if pos > t.length {
+		return -1
+	}
+	t.position = pos
+	return t.position
+}
+
 func (t *Track) String() string {
 	if t == nil {
 		return "nil"
@@ -77,6 +88,7 @@ func NewTrack(path string) (*Track, error) {
 		metadata: metadata,
 	}
 
+	// FIXME: NewTrackReader takes 1s for long songs ... this leads to longer bootup
 	reader, err := NewTrackReader(&t)
 	if err == nil {
 		t.length, err = reader.Length()
