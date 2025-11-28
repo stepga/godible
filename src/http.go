@@ -132,6 +132,19 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+func (p *PlayerHandlerPassthrough) handleCommand(cmd HttpCommand) {
+	switch cmd.Cmd {
+	case "toggle":
+		p.player.Command(TOGGLE)
+	case "next":
+		p.player.Command(NEXT)
+	case "previous":
+		p.player.Command(PREVIOUS)
+	default:
+		slog.Error("unknown command", "cmd", cmd)
+	}
+}
+
 func (p *PlayerHandlerPassthrough) wsReader(conn *websocket.Conn) {
 	for {
 		slog.Debug("XXX new wsRead loop wait")
@@ -149,9 +162,7 @@ func (p *PlayerHandlerPassthrough) wsReader(conn *websocket.Conn) {
 			slog.Error("failed to decode message as HttpCommand", "message", message, "err", err)
 			continue
 		}
-		slog.Debug("XXX", "decoded cmd", cmd)
-
-		// TODO: handle commands
+		p.handleCommand(cmd)
 
 		//err = conn.WriteMessage(messageType, message)
 		//if err != nil {
