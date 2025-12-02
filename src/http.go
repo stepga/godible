@@ -184,9 +184,9 @@ func (p *PlayerHandlerPassthrough) wsReader(conn *websocket.Conn) {
 
 func (p *PlayerHandlerPassthrough) wsWriter(conn *websocket.Conn) {
 	// Time allowed to write the message to the client.
-	writeWait := 100 * time.Millisecond
+	writeWait := 600 * time.Millisecond
 	// Send messages to peer with this period. Must be less than writeWait.
-	sendPeriod := 75 * time.Millisecond
+	sendPeriod := 500 * time.Millisecond
 
 	sendTicker := time.NewTicker(sendPeriod)
 	defer func() {

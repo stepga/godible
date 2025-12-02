@@ -1,7 +1,31 @@
 var time_current_lock = false;
 
-const pause_html = '<embed src="img/Font_Awesome_5_regular_pause-circle.svg">';
-const play_html = '<embed src="img/Font_Awesome_5_regular_play-circle.svg">';
+var is_playing = false;
+
+// FIXME: double book keeping: assets/img/... & these hardcoded strings
+// TODO: load the file content from the files, as in
+//   - https://forum.freecodecamp.org/t/load-local-text-file-with-js/83063/7
+//   - https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+const play_html = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<path d="M371.7 238l-176-107c-15.8-8.8-35.7 2.5-35.7 21v208c0 18.4 19.8 29.8 35.7 21l176-101c16.4-9.1 16.4-32.8 0-42zM504 256C504 119 393 8 256 8S8 119 8 256s111 248 248 248 248-111 248-248zm-448 0c0-110.5 89.5-200 200-200s200 89.5 200 200-89.5 200-200 200S56 366.5 56 256z"/>
+</path>
+</svg>
+<!--
+Font Awesome Free 5.2.0 by @fontawesome - https://fontawesome.com
+License - https://fontawesome.com/license (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License)
+-->
+`;
+const pause_html = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<path d="M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8zm0 448c-110.5 0-200-89.5-200-200S145.5 56 256 56s200 89.5 200 200-89.5 200-200 200zm96-280v160c0 8.8-7.2 16-16 16h-48c-8.8 0-16-7.2-16-16V176c0-8.8 7.2-16 16-16h48c8.8 0 16 7.2 16 16zm-112 0v160c0 8.8-7.2 16-16 16h-48c-8.8 0-16-7.2-16-16V176c0-8.8 7.2-16 16-16h48c8.8 0 16 7.2 16 16z"/>
+</path>
+</svg>
+<!--
+Font Awesome Free 5.2.0 by @fontawesome - https://fontawesome.com
+License - https://fontawesome.com/license (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License)
+-->
+`;
 
 function secondsToDateStr(seconds) {
 	var date = new Date(null);
@@ -25,6 +49,15 @@ function dateStrToSeconds(date) {
     return ret;
 }
 
+function setToggleButton() {
+	var toggle = document.getElementById("toggle");
+	if (is_playing) {
+		toggle.innerHTML = pause_html;
+	} else {
+		toggle.innerHTML = play_html;
+	}
+}
+
 function updateUI(data) {
 	if (data == null || data == "null") {
 		console.log("updateUI: no data passed");
@@ -45,16 +78,8 @@ function updateUI(data) {
 		slider.value = json.duration_current;
 	}
 
-	var toggle = document.getElementById("toggle");
-	if (json.is_playing == true) {
-		if (toggle.innerHTML.toString() != pause_html) {
-			toggle.innerHTML = pause_html;
-		}
-	} else {
-		if (toggle.innerHTML.toString() != play_html) {
-			toggle.innerHTML = play_html;
-		}
-	}
+	is_playing = json.is_playing;
+	setToggleButton();
 }
 
 document.addEventListener("DOMContentLoaded", function(event) {
@@ -74,7 +99,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
 	function downEvent() {
 		time_current_lock = true;
-		console.log("disable automatic time_current updates due to slider action");
 	}
 	slider.onmousedown = downEvent
 	slider.ontouchstart = downEvent
@@ -83,7 +107,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
 		const time_current_date_str = document.getElementById("time_current").textContent;
 		const time_current_seconds = dateStrToSeconds(time_current_date_str);
 		time_current_lock = false;
-		console.log("reenable automatic time_current updates");
 		websocket.send('{ "command": "jump", "payload": "' + time_current_seconds + '"}');
 	}
 	slider.onmouseup = upEvent
@@ -94,6 +117,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	});
 	document.getElementById("toggle").addEventListener('click', function() {
 		websocket.send('{ "command": "toggle", "payload": ""}');
+		is_playing = !is_playing;
+		setToggleButton();
 	});
 	document.getElementById("next").addEventListener('click', function() {
 		websocket.send('{ "command": "next", "payload": ""}');
