@@ -2,30 +2,8 @@ var time_current_lock = false;
 
 var is_playing = false;
 
-// FIXME: double book keeping: assets/img/... & these hardcoded strings
-// TODO: load the file content from the files, as in
-//   - https://forum.freecodecamp.org/t/load-local-text-file-with-js/83063/7
-//   - https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-const play_html = `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-<path d="M371.7 238l-176-107c-15.8-8.8-35.7 2.5-35.7 21v208c0 18.4 19.8 29.8 35.7 21l176-101c16.4-9.1 16.4-32.8 0-42zM504 256C504 119 393 8 256 8S8 119 8 256s111 248 248 248 248-111 248-248zm-448 0c0-110.5 89.5-200 200-200s200 89.5 200 200-89.5 200-200 200S56 366.5 56 256z"/>
-</path>
-</svg>
-<!--
-Font Awesome Free 5.2.0 by @fontawesome - https://fontawesome.com
-License - https://fontawesome.com/license (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License)
--->
-`;
-const pause_html = `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-<path d="M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8zm0 448c-110.5 0-200-89.5-200-200S145.5 56 256 56s200 89.5 200 200-89.5 200-200 200zm96-280v160c0 8.8-7.2 16-16 16h-48c-8.8 0-16-7.2-16-16V176c0-8.8 7.2-16 16-16h48c8.8 0 16 7.2 16 16zm-112 0v160c0 8.8-7.2 16-16 16h-48c-8.8 0-16-7.2-16-16V176c0-8.8 7.2-16 16-16h48c8.8 0 16 7.2 16 16z"/>
-</path>
-</svg>
-<!--
-Font Awesome Free 5.2.0 by @fontawesome - https://fontawesome.com
-License - https://fontawesome.com/license (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License)
--->
-`;
+let play_svg;
+let pause_svg;
 
 function secondsToDateStr(seconds) {
 	var date = new Date(null);
@@ -52,9 +30,9 @@ function dateStrToSeconds(date) {
 function setToggleButton() {
 	var toggle = document.getElementById("toggle");
 	if (is_playing) {
-		toggle.innerHTML = pause_html;
+		toggle.innerHTML = pause_svg;
 	} else {
-		toggle.innerHTML = play_html;
+		toggle.innerHTML = play_svg;
 	}
 }
 
@@ -82,7 +60,16 @@ function updateUI(data) {
 	setToggleButton();
 }
 
+function fetchGlobalSvg(url, obj) {
+	fetch(url)
+		.then( r => r.text() )
+		.then( t => obj = t )
+}
+
 document.addEventListener("DOMContentLoaded", function(event) {
+	fetch("img/Font_Awesome_5_regular_pause-circle.svg").then( r => r.text() ).then( t => pause_svg = t )
+	fetch("img/Font_Awesome_5_regular_play-circle.svg").then( r => r.text() ).then( t => play_svg = t )
+
 	var websocket = new WebSocket("ws://"+window.location.host+"/ws");
 	websocket.onmessage = function(event) {
 		updateUI(event.data);
