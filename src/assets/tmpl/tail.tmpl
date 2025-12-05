@@ -1,6 +1,31 @@
-{{.Basename}}
-{{.Dirname}}
-{{.CurrentSeconds}}
-{{.DurationSeconds}}
-{{.Playing}}
 <br>
+
+<table>
+  <thead>
+    <tr>
+      <th>Dateiname</th>
+      <th>Aktuelle Position (Sekunden)</th>
+      <th>Gesamtdauer (Sekunden)</th>
+    </tr>
+  </thead>
+
+  {{ $tbodies := .Tbodies }}
+  {{ range $tbody := $tbodies }}
+  <tbody>
+
+    <tr>
+      <th class="fa-folder-o" colspan="3" scope="rowgroup">{{$tbody.Header}}</th>
+    </tr>
+
+  {{ range $row := $tbody.Rows }}
+    <tr>
+      <td>{{$row.Basename}}</td>
+      <td>{{$row.CurrentSeconds}}</td>
+      <td>{{$row.DurationSeconds}}</td>
+    </tr>
+  {{ end }}
+
+  </tbody>
+  {{ end }}
+
+</table>

@@ -68,3 +68,28 @@ input {
 	vertical-align: middle;
 }
 
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+th, td {
+  padding: .5rem 1.25rem;
+  border: 1px solid black;
+}
+thead th {
+  background-color: #d3deea;
+  text-align: left;
+}
+tbody th {
+  text-align: start;
+}
+tbody > tr:first-child > th {
+  background-color: #a7e3e4;
+}
+.fa-folder:before, .fa-folder-o:before, .file-audio-o:before {
+  padding-right: 10px;
+}
+
+* {
+  font-family: FontAwesome;
+}

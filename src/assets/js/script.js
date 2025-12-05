@@ -60,15 +60,56 @@ function updateUI(data) {
 	setToggleButton();
 }
 
-function fetchGlobalSvg(url, obj) {
-	fetch(url)
-		.then( r => r.text() )
-		.then( t => obj = t )
+function tbodiesWithDirnamePrefix(dirname) {
+	var ret = [];
+	var ths = document.querySelectorAll('tbody tr th');
+	for (let th of ths) {
+		if (th.textContent.startsWith(dirname)) {
+			ret.push(th.parentElement.parentElement)
+		}
+	}
+	return ret;
+}
+
+function tbodyIsExpanded(tbody) {
+	return tbody.querySelector('tr th').className == 'fa-folder-o'
+}
+
+function tbodyExpand(tbody, doExpand) {
+	tbody.querySelector("th").className = doExpand ? "fa-folder-o" : "fa-folder";
+	for (let td of tbody.getElementsByTagName("td")) {
+		td.style.display = doExpand ? "" : "none";
+	}
 }
 
 document.addEventListener("DOMContentLoaded", function(event) {
 	fetch("img/Font_Awesome_5_regular_pause-circle.svg").then( r => r.text() ).then( t => pause_svg = t )
 	fetch("img/Font_Awesome_5_regular_play-circle.svg").then( r => r.text() ).then( t => play_svg = t )
+
+	var table = document.getElementsByTagName("table")[0];
+	table.addEventListener("mouseover", function(event){
+			console.log("TODO: change background andor change symbol");
+	});
+	table.addEventListener("click", function(event){
+		var elem = event.target;
+		const classNames = ['fa-folder', 'fa-folder-o'];
+		if (classNames.some(className => elem.classList.contains(className)) == false) {
+			return;
+		}
+		var doExpand = !tbodyIsExpanded(elem.parentElement.parentElement);
+		var tbodies = tbodiesWithDirnamePrefix(elem.textContent);
+		for (let tbody of tbodies) {
+			tbodyExpand(tbody, doExpand);
+		}
+
+		for (let tbody of document.querySelectorAll('tbody')) {
+			if (tbodyIsExpanded(tbody)) {
+				document.querySelector('thead tr').style.opacity = "";
+				return;
+			}
+		}
+		document.querySelector('thead tr').style.opacity = "0.3";
+	});
 
 	var websocket = new WebSocket("ws://"+window.location.host+"/ws");
 	websocket.onmessage = function(event) {
@@ -99,6 +140,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	slider.onmouseup = upEvent
 	slider.ontouchend = upEvent
 
+	// TODO: also listen on touch? (does it work on smartphone?)
 	document.getElementById("previous").addEventListener('click', function() {
 		websocket.send('{ "command": "previous", "payload": ""}');
 	});

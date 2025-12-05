@@ -35,11 +35,12 @@ var port = 1234
 // - templates can use `range`
 // - in order to keep the directory tree's alphabetical order, pass also ordered keys next to the map, c.f.: https://stackoverflow.com/a/18342865
 type Row struct {
+	//Id int
+	//FullPath string
 	Basename        string
 	Dirname         string
 	CurrentSeconds  int64
 	DurationSeconds int64
-	Playing         bool
 }
 
 type PlayerHandlerPassthrough struct {
@@ -51,10 +52,19 @@ func trackBasename(track *Track) string {
 	return strings.TrimSuffix(base, filepath.Ext(base))
 }
 
+func trackDirname(track *Track) string {
+	dir := filepath.Dir(track.GetPath())
+	dir_without_datadir := strings.TrimPrefix(dir, strings.TrimSuffix(DATADIR, "/"))
+	if strings.HasPrefix(dir_without_datadir, "/") {
+		return dir_without_datadir
+	}
+	return "/" + dir_without_datadir
+}
+
 func trackToRow(track *Track) Row {
 	return Row{
 		Basename:        trackBasename(track),
-		Dirname:         filepath.Dir(track.GetPath()),
+		Dirname:         trackDirname(track),
 		CurrentSeconds:  track.CurrentSeconds(),
 		DurationSeconds: track.duration,
 	}
@@ -81,13 +91,32 @@ func (p *PlayerHandlerPassthrough) trackListToRows() []Row {
 	return ret
 }
 
-func renderTemplate(w http.ResponseWriter, filename string, r *Row) {
+type Tbody struct {
+	Header string
+	Rows   []Row
+}
+
+type Data struct {
+	Tbodies []Tbody
+}
+
+func (d *Data) add(header string, row Row) {
+	for i := range d.Tbodies {
+		if d.Tbodies[i].Header == header {
+			d.Tbodies[i].Rows = append(d.Tbodies[i].Rows, row)
+			return
+		}
+	}
+	d.Tbodies = append(d.Tbodies, Tbody{Header: header, Rows: []Row{row}})
+}
+
+func renderTemplate(w http.ResponseWriter, filename string, data *Data) {
 	tmpl, err := template.ParseFS(assetsFS, "assets/tmpl/"+filename+".tmpl")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = tmpl.Execute(w, r)
+	err = tmpl.Execute(w, data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -99,14 +128,11 @@ func (p *PlayerHandlerPassthrough) rootHandler(w http.ResponseWriter, r *http.Re
 	if p.player == nil || p.player.TrackList == nil {
 		return
 	}
-	for e := p.player.TrackList.Front(); e != nil; e = e.Next() {
-		track, ok := e.Value.(*Track)
-		if !ok {
-			slog.Error("expected value of type Track", "track", track)
-		}
-		row := trackToRow(track)
-		renderTemplate(w, "tail", &row)
+	var data Data
+	for _, row := range p.trackListToRows() {
+		data.add(row.Dirname, row)
 	}
+	renderTemplate(w, "tail", &data)
 }
 
 type HttpCommand struct {
@@ -288,6 +314,7 @@ func InitHttpHandlers(p *Player) error {
 	http.HandleFunc("/css/", assetsFileServer)
 	http.HandleFunc("/img/", assetsFileServer)
 	http.HandleFunc("/js/", assetsFileServer)
+	http.HandleFunc("/fonts/", assetsFileServer)
 	phPassthrough := &PlayerHandlerPassthrough{player: p}
 	http.HandleFunc("/", phPassthrough.rootHandler)
 	http.HandleFunc("/state", phPassthrough.stateHandler)
