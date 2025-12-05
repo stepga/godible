@@ -1,6 +1,22 @@
-{{.Basename}}
-{{.Dirname}}
-{{.CurrentSeconds}}
-{{.DurationSeconds}}
-{{.Playing}}
-<br>
+<table>
+  <thead>
+    <tr>
+      <th scope="col">basename</th>
+      <th scope="col">dirname</th>
+      <th scope="col">current position (sec)</th>
+      <th scope="col">duration (sec)</th>
+      <th scope="col">is playing</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ range .Rows }}
+    <tr>
+      <th scope="row">{{.Basename}}</th>
+      <td>            {{.Dirname}}</td>
+      <td>            {{.CurrentSeconds}}</td>
+      <td>            {{.DurationSeconds}}</td>
+      <td>            {{.Playing}}</td>
+    </tr>
+    {{ end}}
+  </tbody>
+</table>

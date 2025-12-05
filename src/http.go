@@ -51,10 +51,19 @@ func trackBasename(track *Track) string {
 	return strings.TrimSuffix(base, filepath.Ext(base))
 }
 
+func trackDirname(track *Track) string {
+	dir := filepath.Dir(track.GetPath())
+	dir_without_datadir := strings.TrimPrefix(dir, strings.TrimSuffix(DATADIR, "/"))
+	if strings.HasPrefix(dir_without_datadir, "/") {
+		return dir_without_datadir
+	}
+	return "/" + dir_without_datadir
+}
+
 func trackToRow(track *Track) Row {
 	return Row{
 		Basename:        trackBasename(track),
-		Dirname:         filepath.Dir(track.GetPath()),
+		Dirname:         trackDirname(track),
 		CurrentSeconds:  track.CurrentSeconds(),
 		DurationSeconds: track.duration,
 	}
@@ -81,13 +90,17 @@ func (p *PlayerHandlerPassthrough) trackListToRows() []Row {
 	return ret
 }
 
-func renderTemplate(w http.ResponseWriter, filename string, r *Row) {
+type Data struct {
+	Rows []Row
+}
+
+func renderTemplate(w http.ResponseWriter, filename string, data *Data) {
 	tmpl, err := template.ParseFS(assetsFS, "assets/tmpl/"+filename+".tmpl")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = tmpl.Execute(w, r)
+	err = tmpl.Execute(w, data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -99,14 +112,8 @@ func (p *PlayerHandlerPassthrough) rootHandler(w http.ResponseWriter, r *http.Re
 	if p.player == nil || p.player.TrackList == nil {
 		return
 	}
-	for e := p.player.TrackList.Front(); e != nil; e = e.Next() {
-		track, ok := e.Value.(*Track)
-		if !ok {
-			slog.Error("expected value of type Track", "track", track)
-		}
-		row := trackToRow(track)
-		renderTemplate(w, "tail", &row)
-	}
+	data := Data{Rows: p.trackListToRows()}
+	renderTemplate(w, "tail", &data)
 }
 
 type HttpCommand struct {
