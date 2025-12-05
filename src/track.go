@@ -62,6 +62,15 @@ func (t *Track) String() string {
 	return fmt.Sprintf("{path: %s, position: %d, length: %d}", t.path, t.position, t.length)
 }
 
+func (t *Track) CurrentSeconds() int64 {
+	if t.length == 0 {
+		return 0
+	}
+	var tmp float64 = float64(t.position) / float64(t.length)
+	tmp = tmp * float64(t.duration)
+	return int64(tmp)
+}
+
 func isRegularFile(path string) (bool, error) {
 	fileinfo, err := os.Stat(path)
 	if err != nil {

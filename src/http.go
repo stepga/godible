@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"text/template"
 	"time"
 
@@ -33,11 +35,50 @@ var port = 1234
 // - templates can use `range`
 // - in order to keep the directory tree's alphabetical order, pass also ordered keys next to the map, c.f.: https://stackoverflow.com/a/18342865
 type Row struct {
-	FilePath string
+	Basename        string
+	Dirname         string
+	CurrentSeconds  int64
+	DurationSeconds int64
+	Playing         bool
 }
 
 type PlayerHandlerPassthrough struct {
 	player *Player
+}
+
+func trackBasename(track *Track) string {
+	base := filepath.Base(track.GetPath())
+	return strings.TrimSuffix(base, filepath.Ext(base))
+}
+
+func trackToRow(track *Track) Row {
+	return Row{
+		Basename:        trackBasename(track),
+		Dirname:         filepath.Dir(track.GetPath()),
+		CurrentSeconds:  track.CurrentSeconds(),
+		DurationSeconds: track.duration,
+	}
+}
+
+func (p *PlayerHandlerPassthrough) trackListToRows() []Row {
+	ret := make([]Row, p.player.TrackList.Len())
+
+	element := p.player.TrackList.Front()
+	if element == nil {
+		slog.Error("failed to transform tracklist into gui rows: no tracks found")
+		return nil
+	}
+
+	for i := range ret {
+		track, ok := element.Value.(*Track)
+		if !ok {
+			slog.Error("expected value of type Track", "track", track)
+			continue
+		}
+		ret[i] = trackToRow(track)
+		element = element.Next()
+	}
+	return ret
 }
 
 func renderTemplate(w http.ResponseWriter, filename string, r *Row) {
@@ -63,7 +104,8 @@ func (p *PlayerHandlerPassthrough) rootHandler(w http.ResponseWriter, r *http.Re
 		if !ok {
 			slog.Error("expected value of type Track", "track", track)
 		}
-		renderTemplate(w, "tail", &Row{FilePath: track.GetPath()})
+		row := trackToRow(track)
+		renderTemplate(w, "tail", &row)
 	}
 }
 
