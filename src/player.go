@@ -40,6 +40,8 @@ type Player struct {
 	playSignal chan bool
 	// playing represents Player's state of playing or pausing
 	playing bool
+	// the queue is a FIFO buffer for tracks that should be played out-of-order
+	queue chan *list.Element
 }
 
 var cancelReasonNext = errors.New("next")
@@ -57,20 +59,80 @@ func NewPlayer() (*Player, error) {
 		TrackList:  trackList,
 		current:    trackList.Front(),
 		playSignal: make(chan bool),
+		queue:      make(chan *list.Element, 10),
 	}, nil
 }
 
+func (player *Player) getQueueElement() *list.Element {
+	select {
+	case element := <-player.queue:
+		return element
+	default:
+		return nil
+	}
+}
+
+func (player *Player) getQueueTrack() *Track {
+	element := player.getQueueElement()
+	if element != nil {
+		track, _ := element.Value.(*Track)
+		return track
+	}
+	return nil
+}
+
+func (player *Player) addQueue(element *list.Element) {
+	select {
+	case player.queue <- element:
+	default:
+		track, _ := element.Value.(*Track)
+		slog.Error("queue insert failed: already full", "track", track)
+	}
+}
+
+func (player *Player) findElementForTrackPath(path string) *list.Element {
+	element := player.TrackList.Front()
+	for element != nil {
+		track, _ := element.Value.(*Track)
+		if track == nil {
+			continue
+		}
+		if track.path == path {
+			return element
+		}
+		element = element.Next()
+	}
+	return nil
+}
+
 func (player *Player) getCurrent() *Track {
+	var track *Track
+
 	player.currentMutex.Lock()
 	defer player.currentMutex.Unlock()
 
 	if player.current != nil {
-		t, ok := player.current.Value.(*Track)
-		if ok {
-			return t
-		}
+		track, _ = player.current.Value.(*Track)
 	}
-	return nil
+	return track
+}
+
+func (player *Player) setCurrentTrack(track *Track) {
+	element := player.findElementForTrackPath(track.path)
+	if element == nil {
+		return
+	}
+	player.currentMutex.Lock()
+	defer player.currentMutex.Unlock()
+
+	player.current = element
+}
+
+func (player *Player) setCurrentElement(element *list.Element) {
+	player.currentMutex.Lock()
+	defer player.currentMutex.Unlock()
+
+	player.current = element
 }
 
 func (player *Player) setCurrentPrevious() {
@@ -154,6 +216,12 @@ func (player *Player) Play() {
 		<-player.playSignal
 
 		for {
+			queue_element := player.getQueueElement()
+			if queue_element != nil {
+				slog.Debug("XXX set current from queue", "track", queue_element)
+				player.setCurrentElement(queue_element)
+			}
+
 			t := player.getCurrent()
 			if t == nil {
 				slog.Error("could not fetch current Track")

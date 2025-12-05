@@ -143,6 +143,12 @@ func (p *PlayerHandlerPassthrough) handleCommand(cmd HttpCommand) {
 			return
 		}
 
+		if p.player.playing {
+			p.player.Command(TOGGLE)
+			//FIXME: replace sleep synchronizing the cancelfunc (as in: toggle is prohibited if a cancelfunc is running)
+			time.Sleep(50 * time.Millisecond)
+		}
+
 		track := p.player.getCurrent()
 		length := track.GetLength()
 		duration := track.GetDuration()
@@ -156,12 +162,9 @@ func (p *PlayerHandlerPassthrough) handleCommand(cmd HttpCommand) {
 			position = position - (position % 4)
 		}
 		slog.Debug("XXX jump", "position", position)
-		if p.player.playing {
-			p.player.Command(TOGGLE)
-			// FIXME: due to async nature of cancel functions we are waiting here as a quick fix ... try to do that more elegant)
-			time.Sleep(50 * time.Millisecond)
-		}
+
 		track.SetPosition(position)
+		//p.player.addQueueElement(p.player.current) // XXX: not necessary as current stays the same
 		p.player.Command(TOGGLE)
 	default:
 		slog.Error("unknown command", "cmd", cmd)
