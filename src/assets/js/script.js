@@ -99,6 +99,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	slider.onmouseup = upEvent
 	slider.ontouchend = upEvent
 
+	// TODO: also listen on touch? (does it work on smartphone?)
 	document.getElementById("previous").addEventListener('click', function() {
 		websocket.send('{ "command": "previous", "payload": ""}');
 	});
