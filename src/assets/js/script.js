@@ -87,9 +87,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	fetch("img/Font_Awesome_5_regular_play-circle.svg").then( r => r.text() ).then( t => play_svg = t )
 
 	var table = document.getElementsByTagName("table")[0];
-	table.addEventListener("mouseover", function(event){
-			console.log("TODO: change background andor change symbol");
-	});
 	table.addEventListener("click", function(event){
 		var elem = event.target;
 		const classNames = ['fa-folder', 'fa-folder-o'];
@@ -110,6 +107,13 @@ document.addEventListener("DOMContentLoaded", function(event) {
 		}
 		document.querySelector('thead tr').style.opacity = "0.3";
 	});
+
+	for (let i of document.querySelectorAll('i[class~="fa-play"]')) {
+		var button = i.parentElement;
+		button.addEventListener("click", function(event){
+			console.log("XXX implement websocket toggle & queue this song");
+		});
+	};
 
 	var websocket = new WebSocket("ws://"+window.location.host+"/ws");
 	websocket.onmessage = function(event) {

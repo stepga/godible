@@ -1,3 +1,9 @@
+:root {
+  --blue:  #deeaee;
+  --red:   #f7cac9;
+  --green: #b1cbbb;
+}
+
  /* This enables adding click-events to svg-buttons */
 svg, embed {
   pointer-events: none;
@@ -77,14 +83,17 @@ th, td {
   border: 1px solid black;
 }
 thead th {
-  background-color: #d3deea;
+  background-color: var(--blue);
   text-align: left;
 }
-tbody th {
-  text-align: start;
+thead th:nth-child(2), thead th:nth-child(3) {
+  text-align: center;
 }
-tbody > tr:first-child > th {
-  background-color: #a7e3e4;
+tbody > tr:first-child {
+  background-color: var(--red);
+}
+tbody > tr:first-child > th:first-child {
+  text-align: left;
 }
 .fa-folder:before, .fa-folder-o:before, .file-audio-o:before {
   padding-right: 10px;
@@ -92,4 +101,21 @@ tbody > tr:first-child > th {
 
 * {
   font-family: FontAwesome;
+}
+
+th.buttons, td.buttons {
+  text-align: center;
+  vertical-align: middle;
+}
+
+th.buttons > button, td.buttons > button {
+  height: 100%;
+  font-size: 1.5em;
+  width: 1.5em;
+  margin-left: 0.5em;
+  margin-right: 0.5em;
+}
+
+tr:hover, tbody > tr:first-child:hover {
+  background: var(--green);
 }

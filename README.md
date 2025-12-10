@@ -14,8 +14,7 @@
 * web interface
   * table format for track
     * add onclick events for basename to play the tracks (killer feature ;-))
-    * bonus: folding of directories
-    * bonus: columns with action buttons as: play, enqueue, delete ... further future features :-)
+    * bonus: column with centered action buttons as: play, enqueue, delete ... further future features :-)
   * upload songs
     * update player's internal file list
   * delete songs

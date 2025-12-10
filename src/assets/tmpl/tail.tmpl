@@ -4,8 +4,8 @@
   <thead>
     <tr>
       <th>Dateiname</th>
-      <th>Aktuelle Position (Sekunden)</th>
-      <th>Gesamtdauer (Sekunden)</th>
+      <th>Position/Gesamtdauer (Sekunden)</th>
+      <th>Aktionen</th>
     </tr>
   </thead>
 
@@ -14,14 +14,21 @@
   <tbody>
 
     <tr>
-      <th class="fa-folder-o" colspan="3" scope="rowgroup">{{$tbody.Header}}</th>
+      <th class="fa-folder-o" colspan="2" scope="rowgroup">{{$tbody.Header}}</th>
+      <th class="buttons" scope="rowgroup">
+        <button><i class='fa fa-trash'></i></button>
+      </th>
     </tr>
 
   {{ range $row := $tbody.Rows }}
     <tr>
       <td>{{$row.Basename}}</td>
-      <td>{{$row.CurrentSeconds}}</td>
-      <td>{{$row.DurationSeconds}}</td>
+      <td>{{$row.CurrentSeconds}} / {{$row.DurationSeconds}}</td>
+      <td class="buttons">
+        <button><i class='fa fa-play'></i></button>
+        <button><i class='fa fa-plus'></i></button>
+        <button><i class='fa fa-trash'></i></button>
+      </td>
     </tr>
   {{ end }}
 
