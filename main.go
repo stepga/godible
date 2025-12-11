@@ -46,6 +46,7 @@ func setup() {
 	// get the first available spi port eith empty string.
 	for {
 		time.Sleep(500 * time.Millisecond)
+		//port, err = spireg.Open("SPI1.0") // XXX with "dtoverlay=spi1-1cs,cs0_pin=12" // "Mifare MFRC522 [bus: SPI1.0, reset pin: P1_22, irq pin: P1_12]
 		port, err = spireg.Open("")
 		if err != nil {
 			slog.Error("spireg.Open failed", "err", err)
@@ -77,7 +78,7 @@ func setup() {
 	}
 
 	// setting the antenna signal strength, signal strength from 0 to 7
-	rfid.SetAntennaGain(5)
+	rfid.SetAntennaGain(7)
 
 	fmt.Println("Started rfid reader.")
 }
@@ -123,17 +124,19 @@ func main() {
 
 	// read rfid UID
 	for {
+		slog.Debug("rfid.String", "str", rfid.String())
 		data, err := rfid.ReadUID(5 * time.Second)
 		if err != nil {
 			slog.Error("rfid.ReadUID failed", "err", err)
-			os.Exit(1)
+			//os.Exit(1)
+			time.Sleep(time.Millisecond * 500)
+			continue
 		} else {
 			slog.Debug("rfid.ReadUID read data", "data", hex.EncodeToString(data))
 		}
 		if int(data[0]) == 10 {
 			break //unreachable
 		}
-		time.Sleep(time.Millisecond * 500)
 	}
 
 	player, err := NewPlayer()

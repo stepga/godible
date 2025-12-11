@@ -22,15 +22,19 @@
 
 * save player state on /perm to survive reboots
 
- * move gokrazy web interface to 1080 with autoredirect to 1443 and a self-signed cert
-    * "HTTPPORT": "1080"
-    * "HTTPSPORT": "1443"
-    * "UseTLS": "self-signed"
-  * run new interface on 443 with self signed certificate (tls/ssl is needed for websocket (at least in some? browsers))
-    * generate cert: https://go.dev/src/crypto/tls/generate_cert.go
-    * redirect: https://stackoverflow.com/a/63590299
-    * redirect: https://stackoverflow.com/questions/37536006/how-do-i-rewrite-redirect-from-http-to-https-in-go
-    * redirect: https://gist.github.com/d-schmidt/587ceec34ce1334a5e60
+* powersaving/tweak settings
+  * change antenna gain ([1-7])
+  * polling intervals ...
+
+* move gokrazy web interface to 1080 with autoredirect to 1443 and a self-signed cert
+   * "HTTPPORT": "1080"
+   * "HTTPSPORT": "1443"
+   * "UseTLS": "self-signed"
+ * run new interface on 443 with self signed certificate (tls/ssl is needed for websocket (at least in some? browsers))
+   * generate cert: https://go.dev/src/crypto/tls/generate_cert.go
+   * redirect: https://stackoverflow.com/a/63590299
+   * redirect: https://stackoverflow.com/questions/37536006/how-do-i-rewrite-redirect-from-http-to-https-in-go
+   * redirect: https://gist.github.com/d-schmidt/587ceec34ce1334a5e60
 
 * implement Previous() reset of currently played track
   * introduce a (percentage) threshold of the file being played
