@@ -10,10 +10,6 @@ import (
 func main() {
 	SetDefaultLogger(slog.LevelDebug)
 
-	rfid, err := NewRfidDevice()
-	_ = rfid
-	// TODO
-
 	player, err := NewPlayer()
 	if err != nil {
 		slog.Error("NewPlayer: initializing player failed", "err", err)
@@ -64,6 +60,18 @@ func main() {
 		slog.Error("InitHttpHandlers failed", "err", err)
 		os.Exit(1)
 	}
+
+	rfid, err := NewRfidDevice()
+	uidPassChan := make(chan string)
+	rfid.RfidUidWorker(uidPassChan)
+
+	go func() {
+		for {
+			slog.Debug("XXX: wait for new rfid uid")
+			uid := <-uidPassChan
+			slog.Debug("XXX: got rfid uid", "uid", uid)
+		}
+	}()
 
 	player.Play()
 }
