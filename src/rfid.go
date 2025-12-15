@@ -2,6 +2,7 @@ package godible
 
 import (
 	"log/slog"
+	"strings"
 
 	"encoding/hex"
 	"fmt"
@@ -15,8 +16,9 @@ import (
 )
 
 const (
-	resetPin = "P1_22" // GPIO 25
-	irqPin   = "P1_12" // GPIO 18
+	resetPin        = "P1_22" // GPIO 25
+	irqPin          = "P1_12" // GPIO 18
+	uidWaitDuration = 5 * time.Second
 )
 
 type RfidDevice struct {
@@ -92,4 +94,39 @@ func (rfid *RfidDevice) ReadUID(duration time.Duration) (string, error) {
 		slog.Info("ReadDir returned no data but did no fail")
 	}
 	return hex.EncodeToString(data), nil
+}
+
+func errIsRfidTimeout(err error) bool {
+	return strings.HasPrefix(
+		err.Error(),
+		"mfrc522 lowlevel: timeout waiting for IRQ",
+	)
+}
+
+func (rfid *RfidDevice) RfidUidWorker(uidPass chan string) {
+	failCounterMax := 10
+	failCounter := 0
+	go func() {
+		for {
+			time.Sleep(1 * time.Second)
+			ret, err := rfid.ReadUID(uidWaitDuration)
+			if err != nil && !errIsRfidTimeout(err) {
+				slog.Error("rfid.Read failed", "err", err)
+				failCounter = failCounter + 1
+				if failCounter > failCounterMax {
+					slog.Error("rfid.Read reached maximum amount of errors: abort")
+					break
+				}
+			} else {
+				failCounter = 0
+				if len(ret) == 0 {
+					slog.Debug("skip passing empty rfid uid")
+					continue
+				}
+				slog.Debug("pass rfid uid into channel", "uid", ret)
+				uidPass <- ret
+				slog.Debug("successfully passed rfid uid", "uid", ret)
+			}
+		}
+	}()
 }
