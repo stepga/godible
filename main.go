@@ -12,6 +12,12 @@ import (
 func main() {
 	SetDefaultLogger(slog.LevelDebug)
 
+	slog.Info("remount /perm to read-only initially")
+	err := RemountPerm(true)
+	if err != nil {
+		slog.Error("RemountPerm failed", "err", err)
+	}
+
 	player, err := NewPlayer()
 	if err != nil {
 		slog.Error("NewPlayer: initializing player failed", "err", err)
