@@ -29,11 +29,6 @@ var templates = template.Must(
 )
 var port = 1234
 
-// FIXME:
-// - instead of printing row per row, pass a map of directories and files
-// - instead of tail.tmpl use a directory/file-tree like https://stackoverflow.com/a/51617657
-// - templates can use `range`
-// - in order to keep the directory tree's alphabetical order, pass also ordered keys next to the map, c.f.: https://stackoverflow.com/a/18342865
 type Row struct {
 	//Id int
 	//FullPath string
