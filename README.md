@@ -11,6 +11,20 @@
 
 ## TODOs
 
+* save player state in /perm/godible-data/state.json
+  * survives reboot
+  * re-save once a minute
+  * embed _recalculate_ (or something similar) button in site to generate a sqlite db with all elements
+
+* save track json in /perm/godible-data/tracks.json
+  * if existent upon start: load this json instead of creating the track list again
+
+* do not use golang templating but print the table via js
+  * get tbodies[] data periodically from API
+  * generate tbody html via template literals for each tbody data (see https://stackoverflow.com/questions/66246946/how-to-fill-html-with-local-json-data)
+  * add hash to each tbody https://stackoverflow.com/a/7616484
+  * if tbody id not ex. or hash differs -> replace
+
 * web interface
   * table format for track
     * add onclick events for basename to play the tracks (killer feature ;-))
@@ -19,8 +33,9 @@
     * update player's internal file list
   * delete songs
     * update player's internal file list
-
-* save player state on /perm to survive reboots
+  * play queue
+    * add action buttons to enqueue tracks
+    * needs an interactive queue overview
 
 * powersaving/tweak settings
   * change antenna gain ([1-7])
