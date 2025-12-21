@@ -42,6 +42,7 @@ type Row struct {
 	Dirname         string `json:"dirname"`
 	CurrentSeconds  int64  `json:"current_seconds"`
 	DurationSeconds int64  `json:"duration_seconds"`
+	RfidUid         string `json:"rfid_uid"`
 }
 
 type PlayerHandlerPassthrough struct {
@@ -62,13 +63,14 @@ func trackDirname(track *Track) string {
 	return "/" + dir_without_datadir
 }
 
-func trackToRow(track *Track) Row {
+func (p *PlayerHandlerPassthrough) trackToRow(track *Track) Row {
 	return Row{
 		Fullpath:        track.GetPath(),
 		Basename:        trackBasename(track),
 		Dirname:         trackDirname(track),
 		CurrentSeconds:  track.CurrentSeconds(),
 		DurationSeconds: track.duration,
+		RfidUid:         p.player.GetRfidUidForTrack(track),
 	}
 }
 
@@ -87,7 +89,7 @@ func (p *PlayerHandlerPassthrough) trackListToRows() []Row {
 			slog.Error("expected value of type Track", "track", track)
 			continue
 		}
-		ret[i] = trackToRow(track)
+		ret[i] = p.trackToRow(track)
 		element = element.Next()
 	}
 	return ret
@@ -204,7 +206,6 @@ func (p *PlayerHandlerPassthrough) handleCommand(req WebsocketApiRequest) {
 		}
 
 		track.SetPosition(position)
-		//p.player.addQueueElement(p.player.current) // XXX: not necessary as current stays the same
 		p.player.Command(TOGGLE)
 	default:
 		slog.Error("unknown WebsocketApiRequest type", "type", req.Type)
@@ -230,7 +231,7 @@ func (p *PlayerHandlerPassthrough) wsReader(conn *websocket.Conn) {
 	}
 }
 
-func (p *PlayerHandlerPassthrough) wsWriteState(conn *websocket.Conn) {
+func (p *PlayerHandlerPassthrough) wsWriteState(conn *websocket.Conn) bool {
 	jsonstate, _ := json.Marshal(p.state())
 	req, _ := json.Marshal(WebsocketApiRequest{
 		Type:    "state",
@@ -239,11 +240,12 @@ func (p *PlayerHandlerPassthrough) wsWriteState(conn *websocket.Conn) {
 	err := conn.WriteMessage(websocket.TextMessage, req)
 	if err != nil {
 		slog.Error("writing state via websocket connection failed", "req", req, "err", err)
-		return
+		return false
 	}
+	return true
 }
 
-func (p *PlayerHandlerPassthrough) wsWriteRows(conn *websocket.Conn) {
+func (p *PlayerHandlerPassthrough) wsWriteRows(conn *websocket.Conn) bool {
 	jsonrows, _ := json.Marshal(p.trackListToRows())
 	req, _ := json.Marshal(WebsocketApiRequest{
 		Type:    "rows",
@@ -251,9 +253,10 @@ func (p *PlayerHandlerPassthrough) wsWriteRows(conn *websocket.Conn) {
 	})
 	err := conn.WriteMessage(websocket.TextMessage, req)
 	if err != nil {
-		slog.Error("writing state via websocket connection failed", "req", req, "err", err)
-		return
+		slog.Error("writing rows via websocket connection failed", "req", req, "err", err)
+		return false
 	}
+	return true
 }
 
 func (p *PlayerHandlerPassthrough) wsWriter(conn *websocket.Conn) {
@@ -270,8 +273,10 @@ func (p *PlayerHandlerPassthrough) wsWriter(conn *websocket.Conn) {
 
 	for range sendTicker.C {
 		conn.SetWriteDeadline(time.Now().Add(writeWait))
-		p.wsWriteState(conn)
-		p.wsWriteRows(conn)
+		if p.wsWriteState(conn) == false || p.wsWriteRows(conn) == false {
+			slog.Error("abort (broken?) wsWriter routine due to erros")
+			return
+		}
 	}
 }
 

@@ -120,7 +120,6 @@ func (rfid *RfidDevice) RfidUidSender(uidPass chan string) {
 			} else {
 				failCounter = 0
 				if len(ret) == 0 {
-					slog.Debug("skip passing empty rfid uid")
 					continue
 				}
 				slog.Debug("pass rfid uid into channel", "uid", ret)

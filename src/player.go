@@ -309,21 +309,69 @@ func (player *Player) Command(cmd CommandVal) {
 	}
 }
 
+var rfidUidTrackElementMap map[string]*list.Element
+var trackPathRfidUidMap map[string]string
+
+func (player *Player) GetTrackWithRfidUid(rfidUid string) *list.Element {
+	if el, ok := rfidUidTrackElementMap[rfidUid]; ok {
+		return el
+	}
+	return nil
+}
+
+func (player *Player) GetRfidUidForTrack(track *Track) string {
+	if rfidUid, ok := trackPathRfidUidMap[track.GetPath()]; ok {
+		return rfidUid
+	}
+	return ""
+}
+
+func (player *Player) SetRfidTrack(rfidUid string, trackPath string) bool {
+	trackElement := player.findElementForTrackPath(trackPath)
+	if trackElement == nil {
+		slog.Error("can not find track", "trackPath", trackPath)
+		return false
+	}
+	rfidUidTrackElementMap[rfidUid] = trackElement
+	trackPathRfidUidMap[trackPath] = rfidUid
+	return true
+}
+
 func (player *Player) RfidUidReceiver(uidpass chan string) {
-	// TODO
-	// - find track for uid
-	// - if current track is this rfid-uid-track: do nothing
-	// - else:
-	//   - pause current track: `p.player.Command(TOGGLE)`
-	//   - put rfid track top into the queue: p.player.addQueueElement(p.player.current)
-	//   - continue to play (should play the queue)
-	//   - perhaps strategic sleep necessary (c.f. http.go)
-	// - perhaps: sleep after action to prevent re-reading the same rfid ui over-and-over again
+	rfidUidTrackElementMap = make(map[string]*list.Element)
+	trackPathRfidUidMap = make(map[string]string)
+
+	// FIXME: remove this; just for testing
+	track, _ := player.TrackList.Back().Value.(*Track)
+	player.SetRfidTrack("f6084903", track.GetPath())
+
 	go func() {
 		for {
 			slog.Debug("XXX: wait for new rfid uid")
 			uid := <-uidpass
-			slog.Debug("XXX: got rfid uid", "uid", uid)
+			trackElement := player.GetTrackWithRfidUid(uid)
+			if trackElement == nil {
+				slog.Error("could not find track for given rfid uid", "uid", uid)
+				continue
+			}
+			if trackElement == player.current {
+				slog.Debug("respective track already playing, do nothing", "uid", uid)
+				continue
+			}
+
+			track, _ := trackElement.Value.(*Track)
+			slog.Debug("about to play track corresponding to rfid uif", "uid", uid, "track", track.String())
+
+			// pause currently played track; will save the current position
+			if player.playing {
+				player.Command(TOGGLE)
+				time.Sleep(50 * time.Millisecond)
+			}
+
+			// play the new track
+			player.setCurrentElement(trackElement)
+			// XXX: or player.addQueue(trackElement)
+			player.Command(TOGGLE)
 		}
 	}()
 }
