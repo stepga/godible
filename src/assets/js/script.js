@@ -87,6 +87,8 @@ function tbodyExpand(tbody, doExpand) {
 	}
 }
 
+var websocket;
+
 document.addEventListener("DOMContentLoaded", function(event) {
 	fetch("img/Font_Awesome_5_regular_pause-circle.svg").then( r => r.text() ).then( t => pause_svg = t )
 	fetch("img/Font_Awesome_5_regular_play-circle.svg").then( r => r.text() ).then( t => play_svg = t )
@@ -113,14 +115,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
 		document.querySelector('thead tr').style.opacity = "0.3";
 	});
 
-	for (let i of document.querySelectorAll('i[class~="fa-play"]')) {
-		let button = i.parentElement;
-		button.addEventListener("click", function(event){
-			console.log("XXX implement websocket toggle & queue this song");
-		});
-	};
-
-	let websocket = new WebSocket("ws://"+window.location.host+"/ws");
+	if (typeof(websocket) == 'undefined' || websocket == null) {
+		console.log('initialize websocket connection')
+		websocket = new WebSocket("ws://"+window.location.host+"/ws");
+	}
 	websocket.onmessage = function(event) {
 		let data = JSON.parse(event.data);
 		switch (data['type']) {
@@ -159,7 +157,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	slider.onmouseup = upEvent
 	slider.ontouchend = upEvent
 
-	// TODO: also listen on touch? (does it work on smartphone?)
 	document.getElementById("previous").addEventListener('click', function() {
 		websocket.send('{ "type": "previous", "payload": ""}');
 	});
@@ -170,6 +167,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	});
 	document.getElementById("next").addEventListener('click', function() {
 		websocket.send('{ "type": "next", "payload": ""}');
+	});
+	document.getElementById("alertBoxCloseBtn").addEventListener('click', function() {
+		hideAlertBox(true, "");
 	});
 });
 
@@ -190,6 +190,35 @@ function updateTable(data) {
 		const tbody = getTBodyWithDirname(dirname)
 		tbody.innerHTML += row;
 	}
+	updateRfidButtonEvents()
+}
+
+function updateRfidButtonEvents() {
+	for (let rfidBtn of document.querySelectorAll('button[class~="fa-wifi"]')) {
+		eventlistenerunset = rfidBtn.dataset['eventlistenerunset']
+		if (typeof(eventlistenerunset) == 'undefined' || eventlistenerunset == null) {
+			// eventlistener already added and data attribute remove
+			continue
+		}
+		rfidBtn.addEventListener("click", function(event) {
+			hideAlertBox(false, rfidBtn.dataset.basename);
+
+			//ticker function that will refresh our display every second
+			var date_old = new Date();
+			const max_sec = 10;
+			var refreshIntervalId = setInterval(function() {
+				var date_new = new Date();
+				var over_sec = Math.floor((date_new - date_old)/1000);
+				var cur_sec = max_sec - over_sec;
+				document.getElementById('alertBoxSeconds').textContent = cur_sec;
+				if (cur_sec < 0) {
+					clearInterval(refreshIntervalId);
+					hideAlertBox(true, "");
+				}
+			}, 1000);
+		});
+		rfidBtn.removeAttribute('data-eventlistenerunset');
+	};
 }
 
 function getTBodyWithDirname(dirname) {
@@ -204,16 +233,23 @@ function getTBodyWithDirname(dirname) {
 	<th class="folder fa-folder-o" colspan="1" scope="rowgroup">${dirname}</th>
 	<th class="folder buttons" scope="rowgroup"> </th>
 	<th class="folder buttons" scope="rowgroup">
-		<button onclick="alert('TODO: implement me');"><i class='fa fa-edit'></i></button>
-	</th>
-	<th class="folder buttons" scope="rowgroup">
-		<button onclick="alert('TODO: implement me');"><i class='fa fa-trash'></i></button>
 	</th>
 </tr>`;
 	document.querySelector('table').appendChild(tbody);
 	return tbody;
 }
 
+function hideAlertBox(hide, text) {
+	alertBoxTrackName = document.getElementById("alertBoxTrackName");
+	alertBoxTrackName.textContent = text;
+
+	alertbox = document.getElementById("alertBox");
+	if (hide) {
+		alertbox.style.display='none';
+	} else {
+		alertbox.style.display='block';
+	}
+}
 
 /**
  * Create one big string with interpolated values
@@ -224,14 +260,12 @@ const createRowHTML = ({
 	dirname,
 	duration_seconds,
 	fullpath,
+	rfid_uid,
 }) => `
 <tr id="${fullpath}">
   <td>${basename}</td>
   <td>${current_seconds} / ${duration_seconds}</td>
   <td class="buttons">
-    <button onclick="alert('TODO: implement me');"><i class='fa fa-edit'></i></button>
-  </td>
-  <td class="buttons">
-    <button onclick="alert('TODO: implement me');"><i class='fa fa-trash'></i></button>
+    <button data-eventlistenerunset="true" data-basename="${basename}" data-fullpath="${fullpath}" class="fa-wifi"> ${rfid_uid}</button>
   </td>
 </tr>`;
