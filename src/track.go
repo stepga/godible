@@ -97,7 +97,6 @@ func NewTrack(path string) (*Track, error) {
 		metadata: metadata,
 	}
 
-	// FIXME: NewTrackReader takes 1s for long songs ... this leads to longer bootup
 	reader, err := NewTrackReader(&t)
 	if err == nil {
 		t.length, err = reader.Length()

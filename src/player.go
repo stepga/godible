@@ -50,10 +50,16 @@ var cancelReasonPause = errors.New("pause")
 
 func NewPlayer() (*Player, error) {
 	trackList := list.New()
-	err := CreateTrackList(trackList, DATADIR)
-	if err != nil {
-		return nil, err
-	}
+
+	// XXX: NewTrack takes almost 1s for a 50mb MP3 file.
+	//      For faster startup, create the tracklist in parallel.
+	go func() {
+		err := CreateTrackList(trackList, DATADIR)
+		if err != nil {
+			slog.Error("CreateTrackList failed", "err", err)
+			os.Exit(1)
+		}
+	}()
 	slog.Debug("gathered files", "len", trackList.Len())
 	return &Player{
 		TrackList:  trackList,
@@ -224,8 +230,11 @@ func (player *Player) Play() {
 
 			t := player.getCurrent()
 			if t == nil {
-				slog.Error("could not fetch current Track")
-				os.Exit(1)
+				// TODO: would be nice to forward/tee error messages into the webgui
+				slog.Error("could not fetch current Track, wait & try again")
+				time.Sleep(100 * time.Millisecond)
+				player.current = player.TrackList.Front()
+				continue
 			}
 
 			player.playing = true
