@@ -22,6 +22,11 @@ const (
 
 const DATADIR = "/perm/godible-data/"
 
+type RfidTrackLearn struct {
+	TrackPath string
+	TimeStamp int64
+}
+
 type Player struct {
 	// commandMutex is needed to limit the concurrently executed commands
 	// to one command
@@ -42,6 +47,9 @@ type Player struct {
 	playing bool
 	// the queue is a FIFO buffer for tracks that should be played out-of-order
 	queue chan *list.Element
+	// rfidTrackLearnChan is being filled with a RfidTrackLearn struct.
+	// It is used to register the next read RFID UID to the respective Track.
+	rfidTrackLearnChan chan RfidTrackLearn
 }
 
 var cancelReasonNext = errors.New("next")
@@ -67,6 +75,16 @@ func NewPlayer() (*Player, error) {
 		playSignal: make(chan bool),
 		queue:      make(chan *list.Element, 10),
 	}, nil
+}
+
+func (player *Player) NewRfidTrackLearn(path string) *RfidTrackLearn {
+	if player.findElementForTrackPath(path) == nil {
+		return nil
+	}
+	return &RfidTrackLearn{
+		TrackPath: path,
+		TimeStamp: time.Now().UnixNano(),
+	}
 }
 
 func (player *Player) getQueueElement() *list.Element {
@@ -333,6 +351,7 @@ func (player *Player) SetRfidTrack(rfidUid string, trackPath string) bool {
 		return false
 	}
 	rfidUidTrackElementMap[rfidUid] = trackElement
+	// TODO: wenn uid schon verwendet wurde: alle keys loeschen, die rfidUid als value haben
 	trackPathRfidUidMap[trackPath] = rfidUid
 	return true
 }
@@ -357,6 +376,19 @@ func (player *Player) RfidUidReceiver(uidpass chan string) {
 		for {
 			slog.Debug("XXX: wait for new rfid uid")
 			uid := <-uidpass
+
+			select {
+			case learnTrackPath := <-player.rfidTrackLearnChan:
+				if ret := player.SetRfidTrack(uid, learnTrackPath.TrackPath); ret {
+					slog.Info("linked RFID UID to track", "uid", uid, "track", learnTrackPath.TrackPath)
+				} else {
+					slog.Error("linking RFID UID to track failed", "uid", uid, "track", learnTrackPath.TrackPath)
+				}
+				// TODO unshow message/alertbox on webgui
+				continue
+			default:
+			}
+
 			trackElement := player.GetTrackWithRfidUid(uid)
 			if trackElement == nil {
 				slog.Error("could not find track for given rfid uid", "uid", uid)

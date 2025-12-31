@@ -203,6 +203,8 @@ function updateRfidButtonEvents() {
 		rfidBtn.addEventListener("click", function(event) {
 			hideAlertBox(false, rfidBtn.dataset.basename);
 
+			websocket.send('{ "type": "rfidtracklearn", "payload": "' + rfidBtn.dataset['fullpath'] + '"}');
+
 			//ticker function that will refresh our display every second
 			var date_old = new Date();
 			const max_sec = 10;

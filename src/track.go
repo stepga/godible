@@ -16,6 +16,7 @@ type Track struct {
 	paused   bool
 }
 
+// TODO make it public instead of having getters && setters
 func (t *Track) GetPath() string {
 	if t == nil {
 		return ""
@@ -152,3 +153,7 @@ func CreateTrackList(tl *list.List, root string) error {
 	}
 	return nil
 }
+
+// TODO func TrackListContainsTrackPath(tl *list.List, tp string) bool
+// TODO func TrackListContainsTrack(tl *list.List, t *Track) bool
+// TODO func TrackListContainsElement(tl *list.List, e *list.Element) bool
