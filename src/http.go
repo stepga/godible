@@ -207,6 +207,32 @@ func (p *PlayerHandlerPassthrough) handleCommand(req WebsocketApiRequest) {
 
 		track.SetPosition(position)
 		p.player.Command(TOGGLE)
+	case "rfidtracklearn":
+		path := req.Payload
+		slog.Debug("XXX: rfidtracklearn", "path", path)
+		rfidTrackLearn := p.player.NewRfidTrackLearn(path)
+		if rfidTrackLearn == nil {
+			slog.Error("rfidtracklearn: could not find respective track for given payload", "payload", req.Payload)
+			return
+		}
+		p.player.rfidTrackLearnChan <- *rfidTrackLearn
+		go func() {
+			time.Sleep(10 * time.Second)
+			select {
+			case rfidTrackLearnRead := <-p.player.rfidTrackLearnChan:
+				// TODO: this is a hacky solution; making this cancelable could be better
+				if rfidTrackLearnRead.TimeStamp != (*rfidTrackLearn).TimeStamp {
+					select {
+					case p.player.rfidTrackLearnChan <- rfidTrackLearnRead:
+					default:
+						slog.Error("falsely aborted wrong RFID UID learning and failed to restart it", "trackPath", rfidTrackLearnRead.TrackPath)
+					}
+				} else {
+					slog.Info("no RFID UID has been learnt in time for given Track", "trackPath", rfidTrackLearnRead.TrackPath)
+				}
+			default:
+			}
+		}()
 	default:
 		slog.Error("unknown WebsocketApiRequest type", "type", req.Type)
 	}

@@ -125,3 +125,7 @@ func CreateTrackList(tl *list.List, root string) error {
 	slog.Debug("tracklist length (amount of files)", "root dir", root, "len", tl.Len())
 	return nil
 }
+
+// TODO func TrackListContainsTrackPath(tl *list.List, tp string) bool
+// TODO func TrackListContainsTrack(tl *list.List, t *Track) bool
+// TODO func TrackListContainsElement(tl *list.List, e *list.Element) bool
