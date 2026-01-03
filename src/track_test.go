@@ -32,7 +32,7 @@ func listContainsPath(t *testing.T, fileList *list.List, path string) bool {
 		if !ok {
 			t.Fatalf("expected *AudioSource; is %+v", element.Value)
 		}
-		amPath := track.GetPath()
+		amPath := track.path
 		if amPath == path {
 			return true
 		}
@@ -112,7 +112,7 @@ func TestExoticPaths(t *testing.T) {
 		t.Errorf("expected a file in gathered list")
 	}
 	track, _ := fileList.Front().Value.(*Track)
-	isPath := track.GetPath()
+	isPath := track.path
 	if filepath.Clean(isPath) != filepath.Clean(expectedPath) {
 		t.Errorf("expected Path to be %s, is %s", expectedPath, isPath)
 	}

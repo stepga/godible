@@ -60,7 +60,6 @@ func NewPlayer() (*Player, error) {
 			os.Exit(1)
 		}
 	}()
-	slog.Debug("gathered files", "len", trackList.Len())
 	return &Player{
 		TrackList:  trackList,
 		current:    trackList.Front(),
