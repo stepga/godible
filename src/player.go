@@ -341,8 +341,16 @@ func (player *Player) RfidUidReceiver(uidpass chan string) {
 	trackPathRfidUidMap = make(map[string]string)
 
 	// FIXME: remove this; just for testing
-	track, _ := player.TrackList.Back().Value.(*Track)
-	player.SetRfidTrack("f6084903", track.path)
+	for {
+		if player.TrackList == nil || player.TrackList.Len() == 0 {
+			slog.Debug("XXX: wait for tracklist being built")
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		track, _ := player.TrackList.Front().Value.(*Track)
+		player.SetRfidTrack("f6084903", track.path)
+		break
+	}
 
 	go func() {
 		for {
