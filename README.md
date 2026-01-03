@@ -56,9 +56,17 @@
   * when this threshold is not yet reached, change the track
   * otherwise: reset the current track's offset.
 
-* gpio: implement long press functions
-  * fast forward,
-  * fast backword
+* gpio
+  * implement long press functions
+    * fast forward,
+    * fast backword
+  * simplifying buttons possible?
+    * remove dedicated resistors between button and gnd
+    * direct connection between gnd && button
+    * use internal pullup resistor
+    * if pin is low -> button is pressed
+    * XXX: is debouncing needed (?)
+    * `err := pinIO.In(gpio.PullUp, gpio.FallingEdge)` ?
 
 * fritzing of the hardware setup
 
