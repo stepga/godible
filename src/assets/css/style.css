@@ -77,37 +77,31 @@ input {
 table {
   border-collapse: collapse;
   width: 100%;
+  text-align: center;
 }
 th, td {
-  padding: .5rem 1.25rem;
-  border: 1px solid black;
+  padding: 1rem 1rem;
+}
+thead th, td {
+  border: 1px dotted black;
 }
 thead th {
   background-color: var(--blue);
-  text-align: left;
-}
-thead th:nth-child(2), thead th:nth-child(3) {
-  text-align: center;
 }
 tbody > tr:first-child {
   background-color: var(--red);
 }
-tbody > tr:first-child > th:first-child {
+thead > tr > th:first-child,
+tbody > tr > th:first-child,
+tbody > tr > td:first-child {
   text-align: left;
 }
 .fa-folder:before, .fa-folder-o:before, .file-audio-o:before {
   padding-right: 10px;
 }
-
-* {
-  font-family: FontAwesome;
-}
-
 th.buttons, td.buttons {
-  text-align: center;
   vertical-align: middle;
 }
-
 th.buttons > button, td.buttons > button {
   height: 100%;
   font-size: 1.5em;
@@ -116,6 +110,11 @@ th.buttons > button, td.buttons > button {
   margin-right: 0.5em;
 }
 
+/* Highlight the currently hovered row (directories and tracks) */
 tr:hover, tbody > tr:first-child:hover {
   background: var(--green);
+}
+
+* {
+  font-family: FontAwesome;
 }

@@ -19,12 +19,6 @@
 * save track json in /perm/godible-data/tracks.json
   * if existent upon start: load this json instead of creating the track list again
 
-* do not use golang templating but print the table via js
-  * get tbodies[] data periodically from API
-  * generate tbody html via template literals for each tbody data (see https://stackoverflow.com/questions/66246946/how-to-fill-html-with-local-json-data)
-  * add hash to each tbody https://stackoverflow.com/a/7616484
-  * if tbody id not ex. or hash differs -> replace
-
 * web interface
   * table format for track
     * add onclick events for basename to play the tracks (killer feature ;-))
