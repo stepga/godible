@@ -50,12 +50,12 @@ type PlayerHandlerPassthrough struct {
 }
 
 func trackBasename(track *Track) string {
-	base := filepath.Base(track.GetPath())
+	base := filepath.Base(track.path)
 	return strings.TrimSuffix(base, filepath.Ext(base))
 }
 
 func trackDirname(track *Track) string {
-	dir := filepath.Dir(track.GetPath())
+	dir := filepath.Dir(track.path)
 	dir_without_datadir := strings.TrimPrefix(dir, strings.TrimSuffix(DATADIR, "/"))
 	if strings.HasPrefix(dir_without_datadir, "/") {
 		return dir_without_datadir
@@ -65,7 +65,7 @@ func trackDirname(track *Track) string {
 
 func (p *PlayerHandlerPassthrough) trackToRow(track *Track) Row {
 	return Row{
-		Fullpath:        track.GetPath(),
+		Fullpath:        track.path,
 		Basename:        trackBasename(track),
 		Dirname:         trackDirname(track),
 		CurrentSeconds:  track.CurrentSeconds(),
@@ -151,14 +151,14 @@ func (p *PlayerHandlerPassthrough) state() *HttpState {
 		return nil
 	}
 
-	name := current.GetPath()
-	position := current.GetPosition()
-	length := current.GetLength()
-	duration := current.GetDuration()
-	durationCurrent := duration
+	name := current.path
+	position := current.position
+	length := current.length
+	duration := current.duration
+	durationCurrent := int64(0)
 	if length > 0 {
 		var tmp float64 = float64(position) / float64(length)
-		tmp = tmp * float64(durationCurrent)
+		tmp = tmp * float64(duration)
 		durationCurrent = int64(tmp)
 	}
 
@@ -194,12 +194,12 @@ func (p *PlayerHandlerPassthrough) handleCommand(req WebsocketApiRequest) {
 		}
 
 		track := p.player.getCurrent()
-		length := track.GetLength()
-		duration := track.GetDuration()
+		length := track.length
+		duration := track.duration
 
 		var position int64
 		position = 0
-		if duration != 0 {
+		if duration > 0 {
 			div := float64(duration_current_to_set) / float64(duration)
 			position = int64(div * float64(length))
 			position = position - (position % 4)

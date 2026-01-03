@@ -16,35 +16,6 @@ type Track struct {
 	paused   bool
 }
 
-// TODO make it public instead of having getters && setters
-func (t *Track) GetPath() string {
-	if t == nil {
-		return ""
-	}
-	return t.path
-}
-
-func (t *Track) GetPosition() int64 {
-	if t == nil {
-		return -1
-	}
-	return t.position
-}
-
-func (t *Track) GetLength() int64 {
-	if t == nil {
-		return -1
-	}
-	return t.length
-}
-
-func (t *Track) GetDuration() int64 {
-	if t == nil {
-		return -1
-	}
-	return t.duration
-}
-
 func (t *Track) SetPosition(pos int64) int64 {
 	if t == nil {
 		return -1
@@ -151,6 +122,7 @@ func CreateTrackList(tl *list.List, root string) error {
 			tl.PushBack(t)
 		}
 	}
+	slog.Debug("tracklist length (amount of files)", "root dir", root, "len", tl.Len())
 	return nil
 }
 

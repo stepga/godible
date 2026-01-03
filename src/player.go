@@ -68,7 +68,6 @@ func NewPlayer() (*Player, error) {
 			os.Exit(1)
 		}
 	}()
-	slog.Debug("gathered files", "len", trackList.Len())
 	return &Player{
 		TrackList:  trackList,
 		current:    trackList.Front(),
@@ -338,7 +337,7 @@ func (player *Player) GetTrackWithRfidUid(rfidUid string) *list.Element {
 }
 
 func (player *Player) GetRfidUidForTrack(track *Track) string {
-	if rfidUid, ok := trackPathRfidUidMap[track.GetPath()]; ok {
+	if rfidUid, ok := trackPathRfidUidMap[track.path]; ok {
 		return rfidUid
 	}
 	return ""
@@ -368,7 +367,7 @@ func (player *Player) RfidUidReceiver(uidpass chan string) {
 			continue
 		}
 		track, _ := player.TrackList.Front().Value.(*Track)
-		player.SetRfidTrack("f6084903", track.GetPath())
+		player.SetRfidTrack("f6084903", track.path)
 		break
 	}
 
