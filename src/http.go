@@ -24,18 +24,24 @@ var templates = template.Must(
 		assetsFS,
 		"assets/tmpl/header.tmpl",
 		"assets/tmpl/body.tmpl",
-		"assets/tmpl/tail.tmpl",
 	),
 )
-var port = 1234
+var playerWebGuiPort = 1234
+
+var upgrader = websocket.Upgrader{
+	// XXX: Currently, CheckOrigin in Upgrader allows all connections.
+	// TODO: Check r.Host or r.Header[Origin]?
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
 type Row struct {
-	//Id int
-	//FullPath string
-	Basename        string
-	Dirname         string
-	CurrentSeconds  int64
-	DurationSeconds int64
+	Fullpath        string `json:"fullpath"`
+	Basename        string `json:"basename"`
+	Dirname         string `json:"dirname"`
+	CurrentSeconds  int64  `json:"current_seconds"`
+	DurationSeconds int64  `json:"duration_seconds"`
 }
 
 type PlayerHandlerPassthrough struct {
@@ -58,6 +64,7 @@ func trackDirname(track *Track) string {
 
 func trackToRow(track *Track) Row {
 	return Row{
+		Fullpath:        track.GetPath(),
 		Basename:        trackBasename(track),
 		Dirname:         trackDirname(track),
 		CurrentSeconds:  track.CurrentSeconds(),
@@ -95,7 +102,7 @@ type Data struct {
 	Tbodies []Tbody
 }
 
-func (d *Data) add(header string, row Row) {
+func (d *Data) addRow(header string, row Row) {
 	for i := range d.Tbodies {
 		if d.Tbodies[i].Header == header {
 			d.Tbodies[i].Rows = append(d.Tbodies[i].Rows, row)
@@ -120,18 +127,10 @@ func renderTemplate(w http.ResponseWriter, filename string, data *Data) {
 func (p *PlayerHandlerPassthrough) rootHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "header", nil)
 	renderTemplate(w, "body", nil)
-	if p.player == nil || p.player.TrackList == nil {
-		return
-	}
-	var data Data
-	for _, row := range p.trackListToRows() {
-		data.add(row.Dirname, row)
-	}
-	renderTemplate(w, "tail", &data)
 }
 
-type HttpCommand struct {
-	Cmd     string `json:"command"`
+type WebsocketApiRequest struct {
+	Type    string `json:"type"`
 	Payload string `json:"payload"`
 }
 
@@ -171,38 +170,18 @@ func (p *PlayerHandlerPassthrough) state() *HttpState {
 	}
 }
 
-func (p *PlayerHandlerPassthrough) stateHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "GET":
-		state := p.state()
-		j, _ := json.Marshal(state)
-		w.Write(j)
-	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintf(w, "only GET supported")
-	}
-}
-
-var upgrader = websocket.Upgrader{
-	// XXX: Currently, CheckOrigin in Upgrader allows all connections.
-	// TODO: Check r.Host or r.Header[Origin]?
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
-
-func (p *PlayerHandlerPassthrough) handleCommand(cmd HttpCommand) {
-	switch cmd.Cmd {
+func (p *PlayerHandlerPassthrough) handleCommand(req WebsocketApiRequest) {
+	switch req.Type {
 	case "toggle":
 		p.player.Command(TOGGLE)
 	case "next":
 		p.player.Command(NEXT)
 	case "previous":
 		p.player.Command(PREVIOUS)
-	case "jump":
-		duration_current_to_set, err := strconv.Atoi(cmd.Payload)
+	case "slide":
+		duration_current_to_set, err := strconv.Atoi(req.Payload)
 		if err != nil {
-			slog.Error("handleCommand jump can not convert payload to integer", "err", err)
+			slog.Error("handleCommand 'slide' can not convert payload to integer", "err", err)
 			return
 		}
 
@@ -218,19 +197,17 @@ func (p *PlayerHandlerPassthrough) handleCommand(cmd HttpCommand) {
 
 		var position int64
 		position = 0
-		slog.Debug("XXX jump", "duration_current_to_set", duration_current_to_set, "length", length)
 		if duration != 0 {
 			div := float64(duration_current_to_set) / float64(duration)
 			position = int64(div * float64(length))
 			position = position - (position % 4)
 		}
-		slog.Debug("XXX jump", "position", position)
 
 		track.SetPosition(position)
 		//p.player.addQueueElement(p.player.current) // XXX: not necessary as current stays the same
 		p.player.Command(TOGGLE)
 	default:
-		slog.Error("unknown command", "cmd", cmd)
+		slog.Error("unknown WebsocketApiRequest type", "type", req.Type)
 	}
 }
 
@@ -243,13 +220,39 @@ func (p *PlayerHandlerPassthrough) wsReader(conn *websocket.Conn) {
 		}
 
 		decoder := json.NewDecoder(bytes.NewReader(message))
-		var cmd HttpCommand
-		err = decoder.Decode(&cmd)
+		var req WebsocketApiRequest
+		err = decoder.Decode(&req)
 		if err != nil {
-			slog.Error("failed to decode message as HttpCommand", "message", message, "err", err)
+			slog.Error("failed to decode message as WebsocketApiRequest", "message", message, "err", err)
 			continue
 		}
-		p.handleCommand(cmd)
+		p.handleCommand(req)
+	}
+}
+
+func (p *PlayerHandlerPassthrough) wsWriteState(conn *websocket.Conn) {
+	jsonstate, _ := json.Marshal(p.state())
+	req, _ := json.Marshal(WebsocketApiRequest{
+		Type:    "state",
+		Payload: string(jsonstate),
+	})
+	err := conn.WriteMessage(websocket.TextMessage, req)
+	if err != nil {
+		slog.Error("writing state via websocket connection failed", "req", req, "err", err)
+		return
+	}
+}
+
+func (p *PlayerHandlerPassthrough) wsWriteRows(conn *websocket.Conn) {
+	jsonrows, _ := json.Marshal(p.trackListToRows())
+	req, _ := json.Marshal(WebsocketApiRequest{
+		Type:    "rows",
+		Payload: string(jsonrows),
+	})
+	err := conn.WriteMessage(websocket.TextMessage, req)
+	if err != nil {
+		slog.Error("writing state via websocket connection failed", "req", req, "err", err)
+		return
 	}
 }
 
@@ -267,12 +270,8 @@ func (p *PlayerHandlerPassthrough) wsWriter(conn *websocket.Conn) {
 
 	for range sendTicker.C {
 		conn.SetWriteDeadline(time.Now().Add(writeWait))
-		jsonstate, _ := json.Marshal(p.state())
-		err := conn.WriteMessage(websocket.TextMessage, jsonstate)
-		if err != nil {
-			slog.Error("writing state via websocket connection failed", "jsonstate", jsonstate, "err", err)
-			return
-		}
+		p.wsWriteState(conn)
+		p.wsWriteRows(conn)
 	}
 }
 
@@ -312,11 +311,10 @@ func InitHttpHandlers(p *Player) error {
 	http.HandleFunc("/fonts/", assetsFileServer)
 	phPassthrough := &PlayerHandlerPassthrough{player: p}
 	http.HandleFunc("/", phPassthrough.rootHandler)
-	http.HandleFunc("/state", phPassthrough.stateHandler)
 	http.HandleFunc("/ws", phPassthrough.wsHandler)
 
 	go func() {
-		address := fmt.Sprintf("0.0.0.0:%d", port)
+		address := fmt.Sprintf("0.0.0.0:%d", playerWebGuiPort)
 		slog.Info("listen on ", "address", address)
 		err := http.ListenAndServe(address, nil)
 		slog.Error("ListenAndServe failed", "address", address, "error", err)

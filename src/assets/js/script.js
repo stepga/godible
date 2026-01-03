@@ -1,13 +1,13 @@
 var time_current_lock = false;
-
 var is_playing = false;
-
-let play_svg;
-let pause_svg;
+var play_svg;
+var pause_svg;
 
 function secondsToDateStr(seconds) {
-	var date = new Date(null);
+	let date = new Date(null);
+
 	date.setSeconds(seconds);
+
 	if (seconds < 60*60) {
 		return date.toISOString().slice(14, 19);
 	}
@@ -15,9 +15,9 @@ function secondsToDateStr(seconds) {
 }
 
 function dateStrToSeconds(date) {
-    var arr = date.split(':');
-    var ret = 0;
-    var seconds_multiplier = 1;
+    let arr = date.split(':');
+    let ret = 0;
+    let seconds_multiplier = 1;
 
     while (arr.length > 0) {
         ret += seconds_multiplier * parseInt(arr.pop(), 10);
@@ -28,7 +28,7 @@ function dateStrToSeconds(date) {
 }
 
 function setToggleButton() {
-	var toggle = document.getElementById("toggle");
+	let toggle = document.getElementById("toggle");
 	if (is_playing) {
 		toggle.innerHTML = pause_svg;
 	} else {
@@ -41,11 +41,11 @@ function updateUI(data) {
 		console.log("updateUI: no data passed");
 		return;
 	}
-	var json = JSON.parse(data);
-	var title = document.getElementById("title");
-	var time_current = document.getElementById("time_current");
-	var time_total = document.getElementById("time_total");
-	var slider = document.getElementById("slider");
+	let json = JSON.parse(data);
+	let title = document.getElementById("title");
+	let time_current = document.getElementById("time_current");
+	let time_total = document.getElementById("time_total");
+	let slider = document.getElementById("slider");
 
 	// TODO: update fields only if content really changed
 	title.textContent = json.name;
@@ -61,8 +61,9 @@ function updateUI(data) {
 }
 
 function tbodiesWithDirnamePrefix(dirname) {
-	var ret = [];
-	var ths = document.querySelectorAll('tbody tr th');
+	let ret = [];
+	let ths = document.querySelectorAll('tbody tr th');
+
 	for (let th of ths) {
 		if (th.textContent.startsWith(dirname)) {
 			ret.push(th.parentElement.parentElement)
@@ -72,11 +73,15 @@ function tbodiesWithDirnamePrefix(dirname) {
 }
 
 function tbodyIsExpanded(tbody) {
-	return tbody.querySelector('tr th').className == 'fa-folder-o'
+	return tbody.querySelector('tr th').classList.contains('fa-folder-o')
 }
 
 function tbodyExpand(tbody, doExpand) {
-	tbody.querySelector("th").className = doExpand ? "fa-folder-o" : "fa-folder";
+	if (doExpand) {
+		tbody.querySelector("th").classList.replace("fa-folder", "fa-folder-o");
+	} else {
+		tbody.querySelector("th").classList.replace("fa-folder-o", "fa-folder");
+	}
 	for (let td of tbody.getElementsByTagName("td")) {
 		td.style.display = doExpand ? "" : "none";
 	}
@@ -86,15 +91,15 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	fetch("img/Font_Awesome_5_regular_pause-circle.svg").then( r => r.text() ).then( t => pause_svg = t )
 	fetch("img/Font_Awesome_5_regular_play-circle.svg").then( r => r.text() ).then( t => play_svg = t )
 
-	var table = document.getElementsByTagName("table")[0];
+	let table = document.getElementsByTagName("table")[0];
 	table.addEventListener("click", function(event){
-		var elem = event.target;
-		const classNames = ['fa-folder', 'fa-folder-o'];
+		let elem = event.target;
+		const classNames = ['fa-folder', 'fa-folder-o', 'folder'];
 		if (classNames.some(className => elem.classList.contains(className)) == false) {
 			return;
 		}
-		var doExpand = !tbodyIsExpanded(elem.parentElement.parentElement);
-		var tbodies = tbodiesWithDirnamePrefix(elem.textContent);
+		let doExpand = !tbodyIsExpanded(elem.parentElement.parentElement);
+		let tbodies = tbodiesWithDirnamePrefix(elem.textContent);
 		for (let tbody of tbodies) {
 			tbodyExpand(tbody, doExpand);
 		}
@@ -109,21 +114,31 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	});
 
 	for (let i of document.querySelectorAll('i[class~="fa-play"]')) {
-		var button = i.parentElement;
+		let button = i.parentElement;
 		button.addEventListener("click", function(event){
 			console.log("XXX implement websocket toggle & queue this song");
 		});
 	};
 
-	var websocket = new WebSocket("ws://"+window.location.host+"/ws");
+	let websocket = new WebSocket("ws://"+window.location.host+"/ws");
 	websocket.onmessage = function(event) {
-		updateUI(event.data);
+		let data = JSON.parse(event.data);
+		switch (data['type']) {
+		case "state":
+			updateUI(data['payload']);
+			break;
+		case "rows":
+			updateTable(data['payload']);
+			break;
+		default:
+			console.log("unknown websocket api request type: " + data['type'])
+		}
 	}
 	websocket.onerror = function(event) {
 		console.log("WebSocket error: " + event.data);
 	}
 
-	var slider = document.getElementById("slider");
+	let slider = document.getElementById("slider");
 	slider.oninput = function() {
 		const time_current = document.getElementById("time_current");
 		time_current.textContent = secondsToDateStr(slider.value);
@@ -139,21 +154,84 @@ document.addEventListener("DOMContentLoaded", function(event) {
 		const time_current_date_str = document.getElementById("time_current").textContent;
 		const time_current_seconds = dateStrToSeconds(time_current_date_str);
 		time_current_lock = false;
-		websocket.send('{ "command": "jump", "payload": "' + time_current_seconds + '"}');
+		websocket.send('{ "type": "slide", "payload": "' + time_current_seconds + '"}');
 	}
 	slider.onmouseup = upEvent
 	slider.ontouchend = upEvent
 
 	// TODO: also listen on touch? (does it work on smartphone?)
 	document.getElementById("previous").addEventListener('click', function() {
-		websocket.send('{ "command": "previous", "payload": ""}');
+		websocket.send('{ "type": "previous", "payload": ""}');
 	});
 	document.getElementById("toggle").addEventListener('click', function() {
-		websocket.send('{ "command": "toggle", "payload": ""}');
+		websocket.send('{ "type": "toggle", "payload": ""}');
 		is_playing = !is_playing;
 		setToggleButton();
 	});
 	document.getElementById("next").addEventListener('click', function() {
-		websocket.send('{ "command": "next", "payload": ""}');
+		websocket.send('{ "type": "next", "payload": ""}');
 	});
 });
+
+function updateTable(data) {
+	if (data == null || data == "null") {
+		console.log("updateTable: no data passed");
+		return;
+	}
+	let json = JSON.parse(data);
+
+	const rows = json.map(createRowHTML);
+	for (let [index, row] of rows.entries()) {
+		var element = document.getElementById(json[index]['fullpath']);
+		if (typeof(element) != 'undefined' && element != null) {
+			continue;
+		}
+		let dirname = json[index]['dirname'];
+		const tbody = getTBodyWithDirname(dirname)
+		tbody.innerHTML += row;
+	}
+}
+
+function getTBodyWithDirname(dirname) {
+	for (let th of document.querySelectorAll('tbody > tr > th:nth-child(1)')) {
+		if (th.textContent == dirname) {
+			return th.parentElement.parentElement;
+		}
+	}
+	const tbody = document.createElement("tbody");
+	tbody.innerHTML = `
+<tr>
+	<th class="folder fa-folder-o" colspan="1" scope="rowgroup">${dirname}</th>
+	<th class="folder buttons" scope="rowgroup"> </th>
+	<th class="folder buttons" scope="rowgroup">
+		<button onclick="alert('TODO: implement me');"><i class='fa fa-edit'></i></button>
+	</th>
+	<th class="folder buttons" scope="rowgroup">
+		<button onclick="alert('TODO: implement me');"><i class='fa fa-trash'></i></button>
+	</th>
+</tr>`;
+	document.querySelector('table').appendChild(tbody);
+	return tbody;
+}
+
+
+/**
+ * Create one big string with interpolated values
+ */
+const createRowHTML = ({
+	basename,
+	current_seconds,
+	dirname,
+	duration_seconds,
+	fullpath,
+}) => `
+<tr id="${fullpath}">
+  <td>${basename}</td>
+  <td>${current_seconds} / ${duration_seconds}</td>
+  <td class="buttons">
+    <button onclick="alert('TODO: implement me');"><i class='fa fa-edit'></i></button>
+  </td>
+  <td class="buttons">
+    <button onclick="alert('TODO: implement me');"><i class='fa fa-trash'></i></button>
+  </td>
+</tr>`;
