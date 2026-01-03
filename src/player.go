@@ -308,3 +308,22 @@ func (player *Player) Command(cmd CommandVal) {
 		slog.Error("unknown command", "cmd", cmd)
 	}
 }
+
+func (player *Player) RfidUidReceiver(uidpass chan string) {
+	// TODO
+	// - find track for uid
+	// - if current track is this rfid-uid-track: do nothing
+	// - else:
+	//   - pause current track: `p.player.Command(TOGGLE)`
+	//   - put rfid track top into the queue: p.player.addQueueElement(p.player.current)
+	//   - continue to play (should play the queue)
+	//   - perhaps strategic sleep necessary (c.f. http.go)
+	// - perhaps: sleep after action to prevent re-reading the same rfid ui over-and-over again
+	go func() {
+		for {
+			slog.Debug("XXX: wait for new rfid uid")
+			uid := <-uidpass
+			slog.Debug("XXX: got rfid uid", "uid", uid)
+		}
+	}()
+}
