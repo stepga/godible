@@ -103,7 +103,7 @@ func errIsRfidTimeout(err error) bool {
 	)
 }
 
-func (rfid *RfidDevice) RfidUidWorker(uidPass chan string) {
+func (rfid *RfidDevice) RfidUidSender(uidPass chan string) {
 	failCounterMax := 10
 	failCounter := 0
 	go func() {

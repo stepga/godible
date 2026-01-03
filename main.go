@@ -69,15 +69,8 @@ func main() {
 
 	rfid, err := NewRfidDevice()
 	uidPassChan := make(chan string)
-	rfid.RfidUidWorker(uidPassChan)
-
-	go func() {
-		for {
-			slog.Debug("XXX: wait for new rfid uid")
-			uid := <-uidPassChan
-			slog.Debug("XXX: got rfid uid", "uid", uid)
-		}
-	}()
+	rfid.RfidUidSender(uidPassChan)
+	player.RfidUidReceiver(uidPassChan)
 
 	player.Play()
 }
