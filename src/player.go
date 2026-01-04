@@ -47,9 +47,9 @@ type Player struct {
 	playing bool
 	// the queue is a FIFO buffer for tracks that should be played out-of-order
 	queue chan *list.Element
-	// rfidTrackLearnChan is being filled with a RfidTrackLearn struct.
+	// rfidTrackLearn is being set with a RfidTrackLearn struct pointer.
 	// It is used to register the next read RFID UID to the respective Track.
-	rfidTrackLearnChan chan RfidTrackLearn
+	rfidTrackLearn *RfidTrackLearn
 }
 
 var cancelReasonNext = errors.New("next")
@@ -359,33 +359,23 @@ func (player *Player) RfidUidReceiver(uidpass chan string) {
 	rfidUidTrackElementMap = make(map[string]*list.Element)
 	trackPathRfidUidMap = make(map[string]string)
 
-	// FIXME: remove this; just for testing
-	for {
-		if player.TrackList == nil || player.TrackList.Len() == 0 {
-			slog.Debug("XXX: wait for tracklist being built")
-			time.Sleep(100 * time.Millisecond)
-			continue
-		}
-		track, _ := player.TrackList.Front().Value.(*Track)
-		player.SetRfidTrack("f6084903", track.path)
-		break
-	}
-
 	go func() {
 		for {
 			slog.Debug("XXX: wait for new rfid uid")
 			uid := <-uidpass
 
-			select {
-			case learnTrackPath := <-player.rfidTrackLearnChan:
-				if ret := player.SetRfidTrack(uid, learnTrackPath.TrackPath); ret {
+			if player.rfidTrackLearn != nil {
+				learnTrackPath := player.rfidTrackLearn
+				if player.SetRfidTrack(uid, learnTrackPath.TrackPath) == true {
 					slog.Info("linked RFID UID to track", "uid", uid, "track", learnTrackPath.TrackPath)
 				} else {
 					slog.Error("linking RFID UID to track failed", "uid", uid, "track", learnTrackPath.TrackPath)
 				}
+				player.rfidTrackLearn = nil
 				// TODO unshow message/alertbox on webgui
 				continue
-			default:
+			} else {
+				slog.Debug("no rfid-track-linking to learn")
 			}
 
 			trackElement := player.GetTrackWithRfidUid(uid)
