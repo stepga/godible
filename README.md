@@ -2,6 +2,20 @@
 
 :-)
 
+## Develop & Live-Test
+
+To quickly test,
+* quit/stop the application on your gokrazy device (reserved ports etc.)
+* cross compile the binary
+* scp it (via breakglass) to your device, e.g.:
+```
+GOKDEV=10.0.0.225 # fill in the relevant IP address of your raspberry pi
+make && \
+  scp godible "$GOKDEV":/tmp && \
+  ssh "$GOKDEV" "chmod +x /tmp/godible" && \
+  ssh "$GOKDEV" "/tmp/godible"  | tee /tmp/xxx
+```
+
 ## Debugging/Infos
 
 * Kernel info

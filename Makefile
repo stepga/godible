@@ -1,7 +1,10 @@
-.PHONY: all rpi tar
+.PHONY: all amd64 arm64
 
-all: rpi
+all: arm64
 
-# quick test: cross compile the binary and scp it (via breakglass) onto the raspberry pi
-rpi:
+# raspberry pi
+arm64:
 	 env GOOS=linux GOARCH=arm64 go build
+
+amd64:
+	 env GOOS=linux GOARCH=amd64 go build
