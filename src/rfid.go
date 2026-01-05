@@ -91,7 +91,7 @@ func (rfid *RfidDevice) ReadUID(duration time.Duration) (string, error) {
 		return "", err
 	}
 	if len(data) == 0 {
-		slog.Info("ReadDir returned no data but did no fail")
+		slog.Info("ReadUID returned no data but did no fail")
 	}
 	return hex.EncodeToString(data), nil
 }
