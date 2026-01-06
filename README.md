@@ -25,6 +25,10 @@ make && \
 
 ## TODOs
 
+* rfid: also learn rfid uids for directories
+  * on context switch: save state (track + position)
+  * switch back: restore state
+
 * save player state in /perm/godible-data/state.json
   * survives reboot
   * re-save once a minute

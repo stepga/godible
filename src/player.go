@@ -341,7 +341,12 @@ func (player *Player) RfidUidReceiver(uidpass chan string) {
 				} else {
 					slog.Error("linking RFID UID to track failed", "uid", uid, "track", learnTrackPath.TrackPath)
 				}
-				player.rfidTrackLearn = nil
+				go func() {
+					// prevent the just learnt rfid uid from being read immediately
+					// again and triggering the respective track being played
+					time.Sleep(4 * time.Second)
+					player.rfidTrackLearn = nil
+				}()
 
 				// TODO unshow message/alertbox on webgui
 				continue
