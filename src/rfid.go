@@ -16,9 +16,10 @@ import (
 )
 
 const (
-	resetPin        = "P1_22" // GPIO 25
-	irqPin          = "P1_12" // GPIO 18
-	uidWaitDuration = 5 * time.Second
+	resetPin             = "P1_22" // GPIO 25
+	irqPin               = "P1_12" // GPIO 18
+	uidWaitDuration      = 5 * time.Second
+	readUIDSenderMaxFail = 10
 )
 
 type RfidDevice struct {
@@ -103,28 +104,30 @@ func errIsRfidTimeout(err error) bool {
 	)
 }
 
+// RfidUidSender continuously reads RFID UIDs and passes them into its
+// channel (uidPass). On more than `readUIDSenderMaxFail` consecutive errors,
+// the goroutine will return.
 func (rfid *RfidDevice) RfidUidSender(uidPass chan string) {
-	failCounterMax := 10
 	failCounter := 0
 	go func() {
 		for {
 			time.Sleep(1 * time.Second)
 			ret, err := rfid.ReadUID(uidWaitDuration)
-			if err != nil && !errIsRfidTimeout(err) {
-				slog.Error("rfid.Read failed", "err", err)
-				failCounter = failCounter + 1
-				if failCounter > failCounterMax {
-					slog.Error("rfid.Read reached maximum amount of errors: abort")
-					break
-				}
-			} else {
+			if err == nil {
 				failCounter = 0
-				if len(ret) == 0 {
-					continue
+				if len(ret) != 0 {
+					slog.Info("RfidUidSender rfid.ReadUID)", "uid", ret)
+					uidPass <- ret
 				}
-				slog.Debug("pass rfid uid into channel", "uid", ret)
-				uidPass <- ret
-				slog.Debug("successfully passed rfid uid", "uid", ret)
+				continue
+			}
+			if !errIsRfidTimeout(err) {
+				failCounter = failCounter + 1
+				slog.Error("rfid.ReadUID failed", "err", err, "failCounter", failCounter)
+				if failCounter > readUIDSenderMaxFail {
+					slog.Error("rfid.Read reached maximum amount of errors: abort")
+					return
+				}
 			}
 		}
 	}()

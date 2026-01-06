@@ -302,9 +302,26 @@ func (player *Player) SetRfidTrack(rfidUid string, trackPath string) bool {
 		slog.Error("can not find track", "trackPath", trackPath)
 		return false
 	}
+	// remove old/double mappings; 1 RFID UID -> 1 Track
 	rfidUidTrackElementMap[rfidUid] = trackElement
-	// TODO: wenn uid schon verwendet wurde: alle keys loeschen, die rfidUid als value haben
+	for key, val := range rfidUidTrackElementMap {
+		if key == rfidUid {
+			continue
+		}
+		if val == trackElement {
+			delete(rfidUidTrackElementMap, key)
+		}
+	}
+	// remove old/double mappings; 1 Track -> 1 RFID UID
 	trackPathRfidUidMap[trackPath] = rfidUid
+	for key, val := range trackPathRfidUidMap {
+		if key == trackPath {
+			continue
+		}
+		if val == rfidUid {
+			delete(trackPathRfidUidMap, key)
+		}
+	}
 	return true
 }
 
@@ -314,17 +331,18 @@ func (player *Player) RfidUidReceiver(uidpass chan string) {
 
 	go func() {
 		for {
-			slog.Debug("XXX: wait for new rfid uid")
+			slog.Info("RfidUidReceiver: wait for new RFID UID")
 			uid := <-uidpass
 
-			if player.rfidTrackLearn != nil {
-				learnTrackPath := player.rfidTrackLearn
-				if player.SetRfidTrack(uid, learnTrackPath.TrackPath) == true {
+			learnTrackPath := player.rfidTrackLearn
+			if learnTrackPath != nil {
+				if player.SetRfidTrack(uid, learnTrackPath.TrackPath) {
 					slog.Info("linked RFID UID to track", "uid", uid, "track", learnTrackPath.TrackPath)
 				} else {
 					slog.Error("linking RFID UID to track failed", "uid", uid, "track", learnTrackPath.TrackPath)
 				}
 				player.rfidTrackLearn = nil
+
 				// TODO unshow message/alertbox on webgui
 				continue
 			} else {
@@ -340,7 +358,6 @@ func (player *Player) RfidUidReceiver(uidpass chan string) {
 				slog.Debug("respective track already playing, do nothing", "uid", uid)
 				continue
 			}
-
 			track, _ := trackElement.Value.(*Track)
 			slog.Debug("about to play track corresponding to rfid uif", "uid", uid, "track", track.String())
 
