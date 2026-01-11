@@ -25,6 +25,8 @@ make && \
 
 ## TODOs
 
+* webgui: table row click: play item
+
 * rfid: also learn rfid uids for directories
   * on context switch: save state (track + position)
   * switch back: restore state
@@ -40,14 +42,11 @@ make && \
 * web interface
   * table format for track
     * add onclick events for basename to play the tracks (killer feature ;-))
-    * bonus: column with centered action buttons as: play, enqueue, delete ... further future features :-)
+    * bonus: column with centered action buttons as: play, delete ... further future features :-)
   * upload songs
     * update player's internal file list
   * delete songs
     * update player's internal file list
-  * play queue
-    * add action buttons to enqueue tracks
-    * needs an interactive queue overview
 
 * powersaving/tweak settings
   * change antenna gain ([1-7])
@@ -89,7 +88,7 @@ make && \
 
 ## further feature ideas
 
-* implement websocket ping/ping as in https://github.com/gorilla/websocket/blob/main/examples/chat/home.html
+* implement websocket ping/pong as in https://github.com/gorilla/websocket/blob/main/examples/chat/home.html
 
 * implement recursive file/dir watch and update Player.audioSourceList
   * e.g via https://github.com/fsnotify/fsnotify/issues/18#issuecomment-3109424560
@@ -110,3 +109,30 @@ make && \
   * self soldered flip-switch in usb cable between powerbank and raspberry?
     * hard power cut sucks though
     * https://www.instructables.com/OnOff-switch-for-a-USB-Powered-Device/
+
+* run hostapd on long button push to create open wifi and to change wifi parameters data
+  * hostapd (& dnsmasq?) in alpine-chroot (see [wrong] instructions: https://github.com/gokrazy/gokrazy/issues/49#issuecomment-105980013)
+    ```
+    # >>> start on host
+
+    % cd /tmp
+    % wget https://dl-cdn.alpinelinux.org/alpine/v3.23/releases/aarch64/alpine-minirootfs-3.23.0-aarch64.tar.gz
+    % tar cf alpine.tar alpine-minirootfs-3.23.0-aarch64.tar.gz
+    % go install github.com/gokrazy/breakglass/cmd/breakglass@latest
+    % $GOK_INSTANCE=hello
+    % breakglass -debug_tarball_pattern alpine.tar $GOK_INSTANCE
+
+    # >>> breakglass is a ssh wrapper to the gokrazy instance
+    # tar xf alpine-minirootfs-3.23.0-aarch64.tar.gz
+    # mount -o bind /dev dev
+    # chroot .
+
+    # >>> whithin chroot on gokrazy instance
+    / # mount -o proc proc /proc
+    / # mount -o sysfs sys /sys
+    / # echo nameserver 8.8.8.8 > /etc/resolv.conf
+    / # apk add hostapd
+    ```
+  * build docker image with arm64 hostapd & dnsmasq (alpine base)?
+    * Dockerfile could be part of repo (with a `make` target that build the image)
+    * built image can be shipped via `ExtraFilePaths` (see `config.json` of the gokrazy instance's repo)
