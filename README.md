@@ -25,6 +25,8 @@ make && \
 
 ## TODOs
 
+* webgui: replace with easier bootstrap version?
+* webgui: implement read-only fixed-width logfile view (textarea/div), tee-ing slog output
 * webgui: table row click: play item
 
 * rfid: also learn rfid uids for directories
