@@ -51,7 +51,75 @@
   </thead>
 </table>
 
+
+<div class="container-fluid">
+  <h2>Filterable Table</h2>
+  <input class="form-control" id="myInput" type="text" placeholder="Search..">
+  <br>
+  <table class="table table-bordered table-striped table-hover">
+    <thead>
+      <tr>
+        <th>Dateiname</th>
+        <th>Position</th>
+        <th>RFID-Tag</th>
+      </tr>
+    </thead>
+    <tbody class="demoClassName table-group-divider" id="myTable">
+      <tr>
+        <th colspan=2>/ordner/disc_1</th>
+        <td> <button data-basename="XXX" data-fullpath="/ordner/disc_1" class="fa-wifi"></button> </td>
+      <tr>
+        <td>01 Foo Bar</td>
+        <td>0/211</td>
+        <td> <button data-basename="XXX" data-fullpath="/ordner/disc_1/01 Foo Bar" class="fa-wifi"></button> </td>
+      </tr>
+      <tr>
+        <td>02 VooDoo</td>
+        <td>29/2111</td>
+        <td> <button data-basename="XXX" data-fullpath="/ordner/disc_1/02 VooDoo" class="fa-wifi">blablubb</button> </td>
+      </tr>
+    </tbody>
+    <tbody class="demoClassName table-group-divider" id="myTable2">
+      <tr>
+        <th colspan=2>/ordner/disc_2</th>
+        <td> <button data-basename="XXX" data-fullpath="/ordner/disc_2" class="fa-wifi"></button> </td>
+      <tr>
+        <td>04 Maah</td>
+        <td>0/211</td>
+        <td> <button data-basename="XXX" data-fullpath="/ordner/disc_2/04 Maah" class="fa-wifi"></button> </td>
+      </tr>
+      <tr>
+        <td>05 Bla</td>
+        <td>0/666</td>
+        <td> <button data-basename="XXX" data-fullpath="/ordner/disc_2/05 Bla" class="fa-wifi">blablubb</button> </td>
+      </tr>
+
+    </tbody>
+  </table>
+
+  <p>Note that we start the search in tbody, to prevent filtering the table headers.</p>
+</div>
+
 <script type="text/javascript" src="js/script.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js" integrity="sha384-G/EV+4j2dNv+tEPo3++6LCgdCROaejBqfUeNjuKAiuXbjrxilcCdDz6ZAVfHWe1Y" crossorigin="anonymous"></script>
+<script>
+$(document).ready(function(){
+  $("#myInput").on("keyup", function() {
+    var value = $(this).val().toLowerCase();
+    $("tbody[class*='demoClassName'] tr").filter(function() {
+      // test if containing dir matches
+      var dirMatch = $(this).parent().find('tr').eq(0).text().toLowerCase();
+      var dirMatchIdx = dirMatch.indexOf(value);
+      if (dirMatchIdx > -1) {
+        $(this).toggle(true);
+        return;
+      }
+      // test if actual row matches
+      var rowMatch = $(this).text().toLowerCase();
+      var rowMatchIdx = rowMatch.indexOf(value);
+      $(this).toggle(rowMatchIdx > -1);
+    });
+  });
+});
+</script>
 </body>
 </html>
