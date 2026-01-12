@@ -47,7 +47,8 @@ type Player struct {
 	playing bool
 	// rfidTrackLearn is being set with a RfidTrackLearn struct pointer.
 	// It is used to register the next read RFID UID to the respective Track.
-	rfidTrackLearn *RfidTrackLearn
+	rfidTrackLearn      *RfidTrackLearn
+	rfidTrackLearnBlock bool
 }
 
 var cancelReasonNext = errors.New("next")
@@ -338,20 +339,27 @@ func (player *Player) RfidUidReceiver(uidpass chan string) {
 			if learnTrackPath != nil {
 				if player.SetRfidTrack(uid, learnTrackPath.TrackPath) {
 					slog.Info("linked RFID UID to track", "uid", uid, "track", learnTrackPath.TrackPath)
+					player.rfidTrackLearn = nil
+					// prevent the just learnt rfid uid from being read immediately
+					// again and triggering the respective track being played
+					player.rfidTrackLearnBlock = true
 				} else {
 					slog.Error("linking RFID UID to track failed", "uid", uid, "track", learnTrackPath.TrackPath)
 				}
 				go func() {
-					// prevent the just learnt rfid uid from being read immediately
-					// again and triggering the respective track being played
-					time.Sleep(4 * time.Second)
-					player.rfidTrackLearn = nil
+					time.Sleep(3 * time.Second)
+					player.rfidTrackLearnBlock = false
 				}()
 
 				// TODO unshow message/alertbox on webgui
 				continue
 			} else {
 				slog.Debug("no rfid-track-linking to learn")
+			}
+
+			if !player.rfidTrackLearnBlock {
+				slog.Debug("rfid-track-linking is still blocked")
+				continue
 			}
 
 			trackElement := player.GetTrackWithRfidUid(uid)

@@ -128,6 +128,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
 		case "rows":
 			updateTable(data['payload']);
 			break;
+		case "hiderfidalertbox":
+			hideAlertBox(true, "");
+			break;
 		default:
 			console.log("unknown websocket api request type: " + data['type'])
 		}
@@ -183,15 +186,26 @@ function updateTable(data) {
 	const rows = json.map(createRowHTML);
 	for (let [index, row] of rows.entries()) {
 		var element = document.getElementById(json[index]['fullpath']);
+		// update changed rows
 		if (typeof(element) != 'undefined' && element != null) {
+			const isElementStr = element.textContent.trim();
+			const rowElement = document.createElement("tr");
+			rowElement.innerHTML = row;
+			const shouldElementStr = rowElement.textContent.trim();
+			if (isElementStr !== shouldElementStr) {
+				element.outerHTML = row;
+			}
 			continue;
 		}
+		// insert new rows
 		let dirname = json[index]['dirname'];
 		const tbody = getTBodyWithDirname(dirname)
 		tbody.innerHTML += row;
 	}
 	updateRfidButtonEvents()
 }
+
+const hideAlertBoxIntervalIds = [];
 
 function updateRfidButtonEvents() {
 	for (let rfidBtn of document.querySelectorAll('button[class~="fa-wifi"]')) {
@@ -209,15 +223,17 @@ function updateRfidButtonEvents() {
 			var date_old = new Date();
 			const max_sec = 10;
 			var refreshIntervalId = setInterval(function() {
+				// TODO abort if hideAlertBox is triggered again (global var?)
 				var date_new = new Date();
 				var over_sec = Math.floor((date_new - date_old)/1000);
 				var cur_sec = max_sec - over_sec;
 				document.getElementById('alertBoxSeconds').textContent = cur_sec;
 				if (cur_sec < 0) {
-					clearInterval(refreshIntervalId);
+					//clearInterval(refreshIntervalId);
 					hideAlertBox(true, "");
 				}
 			}, 1000);
+			hideAlertBoxIntervalIds.push(refreshIntervalId);
 		});
 		rfidBtn.removeAttribute('data-eventlistenerunset');
 	};
@@ -242,6 +258,12 @@ function getTBodyWithDirname(dirname) {
 }
 
 function hideAlertBox(hide, text) {
+	while (hideAlertBoxIntervalIds.length > 0) {
+		setIntervalId = hideAlertBoxIntervalIds.pop();
+		console.log("XXX destroy running setInterval() " + setIntervalId);
+		clearInterval(setIntervalId);
+	}
+
 	alertBoxTrackName = document.getElementById("alertBoxTrackName");
 	alertBoxTrackName.textContent = text;
 
@@ -268,6 +290,6 @@ const createRowHTML = ({
   <td>${basename}</td>
   <td>${current_seconds} / ${duration_seconds}</td>
   <td class="buttons">
-    <button data-eventlistenerunset="true" data-basename="${basename}" data-fullpath="${fullpath}" class="fa-wifi"> ${rfid_uid}</button>
+    <button data-eventlistenerunset="true" data-basename="${basename}" data-fullpath="${fullpath}" class="fa-wifi">${rfid_uid}</button>
   </td>
 </tr>`;
