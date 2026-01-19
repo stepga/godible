@@ -22,8 +22,8 @@ var assetsFS embed.FS
 var templates = template.Must(
 	template.ParseFS(
 		assetsFS,
-		"assets/tmpl/header.tmpl",
-		"assets/tmpl/body.tmpl",
+		"assets/tmpl/header.tmpl.html",
+		"assets/tmpl/body.tmpl.html",
 	),
 )
 var playerWebGuiPort = 1234
@@ -115,7 +115,7 @@ func (d *Data) addRow(header string, row Row) {
 }
 
 func renderTemplate(w http.ResponseWriter, filename string, data *Data) {
-	tmpl, err := template.ParseFS(assetsFS, "assets/tmpl/"+filename+".tmpl")
+	tmpl, err := template.ParseFS(assetsFS, "assets/tmpl/"+filename+".tmpl.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
