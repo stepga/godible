@@ -1,14 +1,14 @@
 <body>
-	<h1>Lauschkasten</h1>
 
-	<div class="container text-center">
+	<!--mt-5: margin-top-5, size 5 == $spacer * 3, with sizes ranging from 0 to 5 (see https://getbootstrap.com/docs/5.3/utilities/spacing/)-->
+	<div class="container-fluid text-center mt-5">
 
 		<div class="row">
 			<div class="col-2">
 				00:00
 			</div>
-			<div class="col">
-				<p>Es läuft: <span id="title" style="font-weight:bold">XXX</span></p>
+			<div class="col-8">
+				<p id="title" class="fw-bold fst-italic">Foo Bar Track Name</span></p>
 			</div>
 			<div class="col-2">
 				06:12
@@ -21,26 +21,26 @@
 			</div>
 		</div>
 
+		<br>
+
 		<div class="row">
 			<div class="btn-group" role="group" aria-label="Basic outlined example">
-				<button type="button" class="btn btn-lg btn-outline-primary">
+				<!--p-4: padding, size 4 == $spacer * 1.5-->
+				<button type="button" class="btn btn-primary p-4">
 					<i class="fa fa-arrow-left"></i>
 				</button>
-				<button type="button" class="btn btn-lg btn-outline-primary">
+				<button type="button" class="btn btn-primary p-4 ms-1">
 					<!--the class of this button is dynamically changed after a successfull press-->
 					<i class="fa fa-play"></i>
 				</button>
-				<button type="button" class="btn btn-lg btn-outline-primary">
+				<button type="button" class="btn btn-primary p-4 ms-1">
 					<i class="fa fa-arrow-right"></i>
 				</button>
 			</div>
 		</div>
 	</div>
 
-	<br>
-	<br>
-
-	<div class="wrapper">
+	<div class="wrapper" style="display:none;">
 		<header class="header">
 			<p>Es läuft: <span id="title" style="font-weight:bold">XXX</span></p>
 			<div class="slidecontainer">
@@ -77,7 +77,7 @@
 		(noch <span id="alertBoxSeconds">10</span>s)
 	</div>
 
-	<table>
+	<table style="display:none;">
 		<thead>
 			<tr>
 				<th>Dateiname</th>
@@ -87,11 +87,9 @@
 		</thead>
 	</table>
 
-	<div class="container-fluid">
-		<h2>Filterable Table</h2>
+	<div class="container-fluid mt-5">
 		<input class="form-control" id="myInput" type="text" placeholder="Search..">
-		<br>
-		<table class="table table-bordered table-striped table-hover">
+		<table class="table table-bordered table-striped table-hover mt-3">
 			<thead>
 				<tr>
 					<th>Dateiname</th>
@@ -99,41 +97,80 @@
 					<th>RFID-Tag</th>
 				</tr>
 			</thead>
-			<tbody class="demoClassName table-group-divider" id="myTable">
+			<tbody class="demoClassName table-group-divider" id="myTable1">
 				<tr>
 					<th colspan=2>/ordner/disc_1</th>
-					<td> <button data-basename="XXX" data-fullpath="/ordner/disc_1" class="fa-wifi"></button> </td>
-				<tr>
-					<td>01 Foo Bar</td>
-					<td>0/211</td>
-					<td> <button data-basename="XXX" data-fullpath="/ordner/disc_1/01 Foo Bar" class="fa-wifi"></button> </td>
+					<td>
+						<button
+							data-basename="disc_1"
+							data-fullpath="/ordner/disc_1"
+							class="btn btn-warning mb-1"
+							type="button">
+							<i class="fa fa-wifi"></i>
+						</button>
+					</td>
 				</tr>
 				<tr>
-					<td>02 VooDoo</td>
-					<td>29/2111</td>
-					<td> <button data-basename="XXX" data-fullpath="/ordner/disc_1/02 VooDoo" class="fa-wifi">blablubb</button> </td>
+					<td>01 Xyz</td>
+					<td>0/21</td>
+					<td>
+						<button
+							data-basename="01 Xyz"
+							data-fullpath="/ordner/disc_1/01 Xyz"
+							class="btn btn-warning mb-1"
+							type="button">
+							<i class="fa fa-wifi"></i>
+						</button>
+					</td>
+				</tr>
+				<tr>
+					<td>02 Long Ass Name Foo Bar</td>
+					<td>112/772</td>
+					<td>
+						<button
+							data-basename="02 Long Ass Name Foo Bar"
+							data-fullpath="/ordner/disc_1/02 Long Ass Name Foo Bar"
+							class="btn btn-warning mb-1"
+							type="button">
+							<i class="fa fa-wifi">9a083b11</i>
+						</button>
+					</td>
 				</tr>
 			</tbody>
+
 			<tbody class="demoClassName table-group-divider" id="myTable2">
 				<tr>
 					<th colspan=2>/ordner/disc_2</th>
-					<td> <button data-basename="XXX" data-fullpath="/ordner/disc_2" class="fa-wifi"></button> </td>
+					<td>
+						<button
+							data-basename="disc_2"
+							data-fullpath="/ordner/disc_2"
+							class="btn btn-warning mb-1"
+							type="button">
+							<i class="fa fa-wifi"></i>
+						</button>
+					</td>
+				</tr>
 				<tr>
-					<td>04 Maah</td>
+					<td>05 Foo</td>
 					<td>0/211</td>
-					<td> <button data-basename="XXX" data-fullpath="/ordner/disc_2/04 Maah" class="fa-wifi"></button> </td>
+					<td>
+						<button
+							data-basename="05 Foo"
+							data-fullpath="/ordner/disc_2/05 Foo"
+							class="btn btn-warning mb-1"
+							type="button">
+							<i class="fa fa-wifi">fb983b06</i>
+						</button>
+					</td>
 				</tr>
-				<tr>
-					<td>05 Bla</td>
-					<td>0/666</td>
-					<td> <button data-basename="XXX" data-fullpath="/ordner/disc_2/05 Bla" class="fa-wifi">blablubb</button> </td>
-				</tr>
-
 			</tbody>
 		</table>
-
-		<p>Note that we start the search in tbody, to prevent filtering the table headers.</p>
 	</div>
+
+	<button type="button" class="btn btn-primary">Primary</button>
+	<br>
+	<br>
 
 	<script type="text/javascript" src="js/script.js"></script>
 	<script>

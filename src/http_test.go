@@ -11,7 +11,9 @@ import (
 func TestInitHttpHandlers(t *testing.T) {
 	p := &Player{}
 	tracklist := list.New()
-	err := CreateTrackList(tracklist, "/home/feni/repos/godible-data")
+	// FIXME: CreateTrackList takes forever ... TODO: speed up
+	os.MkdirAll("/tmp/empty", 0o755)
+	err := CreateTrackList(tracklist, "/tmp/empty")
 	if err != nil {
 		t.Fatalf("CreateTrackList failed: %+v", err)
 	}

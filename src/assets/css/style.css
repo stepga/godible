@@ -1,11 +1,15 @@
+/* see '2016 Palettes' on https://www.w3schools.com/colors/colors_palettes.asp */
 :root {
-  --blue:     #deeaee;
-  --red:      #f7cac9;
-  --red-dark: #f7786b;
-  --green:    #b1cbbb;
+  --blue-light:  #deeaee;
+  --blue-medium: #92a8d1;
+  --blue-dark:   #034f84;
+  --red-light:   #f7cac9;
+  --red-medium:  #f7786b;
+  --red-dark:    #c94c4c;
+  --green-light: #b1cbbb;
 }
 
- /* This enables adding click-events to svg-buttons */
+/* This enables adding click-events to svg-buttons */
 svg, embed {
   pointer-events: none;
 }
@@ -87,10 +91,10 @@ thead th, td {
   border: 1px dotted black;
 }
 thead th {
-  background-color: var(--blue);
+  background-color: var(--blue-light);
 }
 tbody > tr:first-child {
-  background-color: var(--red);
+  background-color: var(--red-light);
 }
 thead > tr > th:first-child,
 tbody > tr > th:first-child,
@@ -112,7 +116,7 @@ th.buttons > button, td.buttons > button {
 
 /* Highlight the currently hovered row (directories and tracks) */
 tr:hover, tbody > tr:first-child:hover {
-  background: var(--green);
+  background: var(--green-light);
 }
 
 * {
@@ -159,11 +163,39 @@ tr:hover, tbody > tr:first-child:hover {
  */
 .table tbody tr:nth-child(1) td,
 .table tbody tr:nth-child(1) th {
-  background-color: var(--red);
+  background-color: var(--blue-light);
 }
 
 /* highlight a hovered table row */
 .table-hover tbody tr:hover th,
 .table-hover tbody tr:hover td {
-  background-color: var(--green);
+  background-color: var(--green-light);
+}
+
+/* the action button column should have a small fixed size */
+.table td:nth-child(3) {
+  width: 2em; /* just an example of fixed width column */
+  min-width: 2em;
+}
+
+/* introduce a hover-and-click effect for bootstrap buttons */
+.btn {
+  position: relative;
+  transition: none;
+}
+.btn-primary, .btn-warning {
+  box-shadow: 0 6px #000;
+}
+.btn-primary:hover, .btn-warning:hover {
+  box-shadow: 0 3px #000;
+  top: 3px;
+}
+.btn-primary:active, .btn-warning:active {
+  box-shadow: 0 0px #000;
+  top: 6px;
+}
+
+/* set custom button colors */
+.btn-primary, .btn-primary:hover, .btn-primary:active, .btn-primary:visited {
+    background-color: var(--blue-dark)!important;
 }
