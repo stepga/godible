@@ -1,125 +1,160 @@
 <body>
+	<h1>Lauschkasten</h1>
 
-<h1>Lauschkasten</h1>
+	<div class="container text-center">
 
-<div class="wrapper">
-	<header class="header">
-		<p>Es läuft: <span id="title" style="font-weight:bold">XXX</span></p>
-		<div class="slidecontainer">
-		<span id="time_current">00:00</span>
-		<input type="range" min="0" max="100" value="0" class="slider" id="slider">
-		<span id="time_total">00:00</span>
+		<div class="row">
+			<div class="col-2">
+				00:00
+			</div>
+			<div class="col">
+				<p>Es läuft: <span id="title" style="font-weight:bold">XXX</span></p>
+			</div>
+			<div class="col-2">
+				06:12
+			</div>
 		</div>
-	</header>
 
-	<aside class="aside aside-1">
-		<button id="previous" type="button" style="width: 20%; height: 20%;">
-			<embed src="img/Font_Awesome_5_regular_arrow-alt-circle-left.svg">
-		</button>
-	</aside>
+		<div class="row">
+			<div class="col">
+				<input type="range" class="form-range" min="0" max="100" id="range2">
+			</div>
+		</div>
 
-	<aside class="aside aside-2">
-		<button id="toggle" type="button" style="width: 20%; height: 20%;">
-			<embed src="img/Font_Awesome_5_regular_play-circle.svg">
-		</button>
-	</aside>
+		<div class="row">
+			<div class="btn-group" role="group" aria-label="Basic outlined example">
+				<button type="button" class="btn btn-lg btn-outline-primary">
+					<i class="fa fa-arrow-left"></i>
+				</button>
+				<button type="button" class="btn btn-lg btn-outline-primary">
+					<!--the class of this button is dynamically changed after a successfull press-->
+					<i class="fa fa-play"></i>
+				</button>
+				<button type="button" class="btn btn-lg btn-outline-primary">
+					<i class="fa fa-arrow-right"></i>
+				</button>
+			</div>
+		</div>
+	</div>
 
-	<aside class="aside aside-3">
-		<button id="next" type="button" style="width: 20%; height: 20%;">
-			<embed src="img/Font_Awesome_5_regular_arrow-alt-circle-right.svg">
-		</button>
-	</aside>
-</div>
+	<br>
+	<br>
+
+	<div class="wrapper">
+		<header class="header">
+			<p>Es läuft: <span id="title" style="font-weight:bold">XXX</span></p>
+			<div class="slidecontainer">
+				<span id="time_current">00:00</span>
+				<input type="range" min="0" max="100" value="0" class="slider" id="slider">
+				<span id="time_total">00:00</span>
+			</div>
+		</header>
+
+		<aside class="aside aside-1">
+			<button id="previous" type="button" style="width: 20%; height: 20%;">
+				<embed src="img/Font_Awesome_5_regular_arrow-alt-circle-left.svg">
+			</button>
+		</aside>
+
+		<aside class="aside aside-2">
+			<button id="toggle" type="button" style="width: 20%; height: 20%;">
+				<embed src="img/Font_Awesome_5_regular_play-circle.svg">
+			</button>
+		</aside>
+
+		<aside class="aside aside-3">
+			<button id="next" type="button" style="width: 20%; height: 20%;">
+				<embed src="img/Font_Awesome_5_regular_arrow-alt-circle-right.svg">
+			</button>
+		</aside>
+	</div>
 
 
-<br>
+	<div style="display:none;" id="alertBox" class="alert">
+		<span id="alertBoxCloseBtn" class="closebtn">&times;</span>
+		<strong>Lerne RFID-UID für:</strong>
+		<span id="alertBoxTrackName"></span>
+		(noch <span id="alertBoxSeconds">10</span>s)
+	</div>
 
-<div style="display:none;" id="alertBox" class="alert">
-  <span id="alertBoxCloseBtn" class="closebtn">&times;</span>
-  <strong>Lerne RFID-UID für:</strong>
-  <span id="alertBoxTrackName"></span>
-  (noch <span id="alertBoxSeconds">10</span>s)
-</div>
+	<table>
+		<thead>
+			<tr>
+				<th>Dateiname</th>
+				<th>Position/Gesamtdauer (Sekunden)</th>
+				<th colspan="1">RFID UID</th>
+			</tr>
+		</thead>
+	</table>
 
-<table>
-  <thead>
-    <tr>
-      <th>Dateiname</th>
-      <th>Position/Gesamtdauer (Sekunden)</th>
-      <th colspan="1">RFID UID</th>
-    </tr>
-  </thead>
-</table>
+	<div class="container-fluid">
+		<h2>Filterable Table</h2>
+		<input class="form-control" id="myInput" type="text" placeholder="Search..">
+		<br>
+		<table class="table table-bordered table-striped table-hover">
+			<thead>
+				<tr>
+					<th>Dateiname</th>
+					<th>Position</th>
+					<th>RFID-Tag</th>
+				</tr>
+			</thead>
+			<tbody class="demoClassName table-group-divider" id="myTable">
+				<tr>
+					<th colspan=2>/ordner/disc_1</th>
+					<td> <button data-basename="XXX" data-fullpath="/ordner/disc_1" class="fa-wifi"></button> </td>
+				<tr>
+					<td>01 Foo Bar</td>
+					<td>0/211</td>
+					<td> <button data-basename="XXX" data-fullpath="/ordner/disc_1/01 Foo Bar" class="fa-wifi"></button> </td>
+				</tr>
+				<tr>
+					<td>02 VooDoo</td>
+					<td>29/2111</td>
+					<td> <button data-basename="XXX" data-fullpath="/ordner/disc_1/02 VooDoo" class="fa-wifi">blablubb</button> </td>
+				</tr>
+			</tbody>
+			<tbody class="demoClassName table-group-divider" id="myTable2">
+				<tr>
+					<th colspan=2>/ordner/disc_2</th>
+					<td> <button data-basename="XXX" data-fullpath="/ordner/disc_2" class="fa-wifi"></button> </td>
+				<tr>
+					<td>04 Maah</td>
+					<td>0/211</td>
+					<td> <button data-basename="XXX" data-fullpath="/ordner/disc_2/04 Maah" class="fa-wifi"></button> </td>
+				</tr>
+				<tr>
+					<td>05 Bla</td>
+					<td>0/666</td>
+					<td> <button data-basename="XXX" data-fullpath="/ordner/disc_2/05 Bla" class="fa-wifi">blablubb</button> </td>
+				</tr>
 
+			</tbody>
+		</table>
 
-<div class="container-fluid">
-  <h2>Filterable Table</h2>
-  <input class="form-control" id="myInput" type="text" placeholder="Search..">
-  <br>
-  <table class="table table-bordered table-striped table-hover">
-    <thead>
-      <tr>
-        <th>Dateiname</th>
-        <th>Position</th>
-        <th>RFID-Tag</th>
-      </tr>
-    </thead>
-    <tbody class="demoClassName table-group-divider" id="myTable">
-      <tr>
-        <th colspan=2>/ordner/disc_1</th>
-        <td> <button data-basename="XXX" data-fullpath="/ordner/disc_1" class="fa-wifi"></button> </td>
-      <tr>
-        <td>01 Foo Bar</td>
-        <td>0/211</td>
-        <td> <button data-basename="XXX" data-fullpath="/ordner/disc_1/01 Foo Bar" class="fa-wifi"></button> </td>
-      </tr>
-      <tr>
-        <td>02 VooDoo</td>
-        <td>29/2111</td>
-        <td> <button data-basename="XXX" data-fullpath="/ordner/disc_1/02 VooDoo" class="fa-wifi">blablubb</button> </td>
-      </tr>
-    </tbody>
-    <tbody class="demoClassName table-group-divider" id="myTable2">
-      <tr>
-        <th colspan=2>/ordner/disc_2</th>
-        <td> <button data-basename="XXX" data-fullpath="/ordner/disc_2" class="fa-wifi"></button> </td>
-      <tr>
-        <td>04 Maah</td>
-        <td>0/211</td>
-        <td> <button data-basename="XXX" data-fullpath="/ordner/disc_2/04 Maah" class="fa-wifi"></button> </td>
-      </tr>
-      <tr>
-        <td>05 Bla</td>
-        <td>0/666</td>
-        <td> <button data-basename="XXX" data-fullpath="/ordner/disc_2/05 Bla" class="fa-wifi">blablubb</button> </td>
-      </tr>
+		<p>Note that we start the search in tbody, to prevent filtering the table headers.</p>
+	</div>
 
-    </tbody>
-  </table>
-
-  <p>Note that we start the search in tbody, to prevent filtering the table headers.</p>
-</div>
-
-<script type="text/javascript" src="js/script.js"></script>
-<script>
+	<script type="text/javascript" src="js/script.js"></script>
+	<script>
 $(document).ready(function(){
-  $("#myInput").on("keyup", function() {
-    var value = $(this).val().toLowerCase();
-    $("tbody[class*='demoClassName'] tr").filter(function() {
-      // test if containing dir matches
-      var dirMatch = $(this).parent().find('tr').eq(0).text().toLowerCase();
-      var dirMatchIdx = dirMatch.indexOf(value);
-      if (dirMatchIdx > -1) {
-        $(this).toggle(true);
-        return;
-      }
-      // test if actual row matches
-      var rowMatch = $(this).text().toLowerCase();
-      var rowMatchIdx = rowMatch.indexOf(value);
-      $(this).toggle(rowMatchIdx > -1);
-    });
-  });
+	$("#myInput").on("keyup", function() {
+		var value = $(this).val().toLowerCase();
+		$("tbody[class*='demoClassName'] tr").filter(function() {
+			// test if containing dir matches
+			var dirMatch = $(this).parent().find('tr').eq(0).text().toLowerCase();
+			var dirMatchIdx = dirMatch.indexOf(value);
+			if (dirMatchIdx > -1) {
+				$(this).toggle(true);
+				return;
+			}
+			// test if actual row matches
+			var rowMatch = $(this).text().toLowerCase();
+			var rowMatchIdx = rowMatch.indexOf(value);
+			$(this).toggle(rowMatchIdx > -1);
+		});
+	});
 });
-</script>
+	</script>
 </body>
 </html>

@@ -146,3 +146,24 @@ tr:hover, tbody > tr:first-child:hover {
 .closebtn:hover {
   color: white;
 }
+
+
+/***************************/
+/* bootstrap customization */
+/***************************/
+
+/*
+ * the first row of each tbody is a directory name.
+ * it contains one table header (th) and at least one table data cell.
+ * the whole row should have the some background color.
+ */
+.table tbody tr:nth-child(1) td,
+.table tbody tr:nth-child(1) th {
+  background-color: var(--red);
+}
+
+/* highlight a hovered table row */
+.table-hover tbody tr:hover th,
+.table-hover tbody tr:hover td {
+  background-color: var(--green);
+}
