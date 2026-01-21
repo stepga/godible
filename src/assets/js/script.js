@@ -38,7 +38,7 @@ function setToggleButton() {
 
 function updateUI(data) {
 	if (data == null || data == "null") {
-		console.log("updateUI: no data passed");
+		//console.log("updateUI: no data passed");
 		return;
 	}
 	let json = JSON.parse(data);
@@ -178,7 +178,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
 function updateTable(data) {
 	if (data == null || data == "null") {
-		console.log("updateTable: no data passed");
+		//console.log("updateTable: no data passed");
 		return;
 	}
 	let json = JSON.parse(data);
@@ -293,3 +293,38 @@ const createRowHTML = ({
     <button data-eventlistenerunset="true" data-basename="${basename}" data-fullpath="${fullpath}" class="fa-wifi">${rfid_uid}</button>
   </td>
 </tr>`;
+
+function registerFilterSearch() {
+	$("#filterInput").on("keyup", function() {
+		var filterSearchString = $(this).val().toLowerCase();
+		$("tbody tr").filter(function() {
+			// directory of iterated row matches the search:
+			// show all corresponding rows
+			var directoryRow = $(this).parent().find('tr').eq(0);
+			var directoryRowText = directoryRow.text().toLowerCase();
+			if (directoryRowText.indexOf(filterSearchString) > -1) {
+				$(this).toggle(true);
+				return;
+			}
+
+			// iterated row (may also be the directory row) matches the search:
+			// show row and its corresponding directory row
+			var row = $(this);
+			var rowText = row.text().toLowerCase();
+			if (rowText.indexOf(filterSearchString) > -1) {
+				$(this).toggle(true);
+				directoryRow.toggle(true);
+			} else {
+				$(this).toggle(false);
+			}
+		});
+	});
+}
+
+$(document).ready(function(){
+	registerFilterSearch();
+	// TODO:
+	// - websocket handler
+	// - slider
+	// - table tbody hiding
+});

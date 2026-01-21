@@ -1,5 +1,11 @@
 <body>
 
+
+<!--TODO: via `$('.alert').eq(0).toggle(false)` `display:none` is toggled, $().alert('close') would remove the alert from the DOM-->
+<div class="alert alert-primary" role="alert">
+  This is a primary alert with <a href="#" class="alert-link">an example link</a>. Give it a click if you like.
+</div>
+
 	<!--mt-5: margin-top-5, size 5 == $spacer * 3, with sizes ranging from 0 to 5 (see https://getbootstrap.com/docs/5.3/utilities/spacing/)-->
 	<div class="container-fluid text-center mt-5">
 
@@ -17,7 +23,7 @@
 
 		<div class="row">
 			<div class="col">
-				<input type="range" class="form-range" min="0" max="100" id="range2">
+				<input type="range" class="form-range" min="0" max="100" id="slider">
 			</div>
 		</div>
 
@@ -88,7 +94,7 @@
 	</table>
 
 	<div class="container-fluid mt-5">
-		<input class="form-control" id="myInput" type="text" placeholder="Search..">
+		<input class="form-control" id="filterInput" type="text" placeholder="Filter die Einträge..">
 		<table class="table table-bordered table-striped table-hover mt-3">
 			<thead>
 				<tr>
@@ -97,7 +103,7 @@
 					<th>RFID-Tag</th>
 				</tr>
 			</thead>
-			<tbody class="demoClassName table-group-divider" id="myTable1">
+			<tbody class="table-group-divider">
 				<tr>
 					<th colspan=2>/ordner/disc_1</th>
 					<td>
@@ -138,7 +144,7 @@
 				</tr>
 			</tbody>
 
-			<tbody class="demoClassName table-group-divider" id="myTable2">
+			<tbody class="table-group-divider">
 				<tr>
 					<th colspan=2>/ordner/disc_2</th>
 					<td>
@@ -173,25 +179,5 @@
 	<br>
 
 	<script type="text/javascript" src="js/script.js"></script>
-	<script>
-$(document).ready(function(){
-	$("#myInput").on("keyup", function() {
-		var value = $(this).val().toLowerCase();
-		$("tbody[class*='demoClassName'] tr").filter(function() {
-			// test if containing dir matches
-			var dirMatch = $(this).parent().find('tr').eq(0).text().toLowerCase();
-			var dirMatchIdx = dirMatch.indexOf(value);
-			if (dirMatchIdx > -1) {
-				$(this).toggle(true);
-				return;
-			}
-			// test if actual row matches
-			var rowMatch = $(this).text().toLowerCase();
-			var rowMatchIdx = rowMatch.indexOf(value);
-			$(this).toggle(rowMatchIdx > -1);
-		});
-	});
-});
-	</script>
 </body>
 </html>

@@ -181,6 +181,7 @@ tr:hover, tbody > tr:first-child:hover {
 /* introduce a hover-and-click effect for bootstrap buttons */
 .btn {
   position: relative;
+  z-index: -1; /* XXX: due to 'position: relative' the stacking context changes & buttons would cover a bootstrap alert */
   transition: none;
 }
 .btn-primary, .btn-warning {
@@ -197,5 +198,5 @@ tr:hover, tbody > tr:first-child:hover {
 
 /* set custom button colors */
 .btn-primary, .btn-primary:hover, .btn-primary:active, .btn-primary:visited {
-    background-color: var(--blue-dark)!important;
+  background-color: var(--blue-dark)!important;
 }
