@@ -46,7 +46,7 @@ type Row struct {
 }
 
 type PlayerHandlerPassthrough struct {
-	player *Player
+	*Player
 }
 
 func trackBasename(track *Track) string {
@@ -70,14 +70,14 @@ func (p *PlayerHandlerPassthrough) trackToRow(track *Track) Row {
 		Dirname:         trackDirname(track),
 		CurrentSeconds:  track.CurrentSeconds(),
 		DurationSeconds: track.duration,
-		RfidUid:         p.player.GetRfidUidForTrack(track),
+		RfidUid:         p.GetRfidUidForTrack(track),
 	}
 }
 
 func (p *PlayerHandlerPassthrough) trackListToRows() []Row {
-	ret := make([]Row, p.player.TrackList.Len())
+	ret := make([]Row, p.TrackList.Len())
 
-	element := p.player.TrackList.Front()
+	element := p.TrackList.Front()
 	if element == nil {
 		slog.Error("failed to transform tracklist into gui rows: no tracks found")
 		return nil
@@ -146,7 +146,7 @@ type HttpState struct {
 }
 
 func (p *PlayerHandlerPassthrough) state() *HttpState {
-	current := p.player.getCurrent()
+	current := p.getCurrent()
 	if current == nil {
 		return nil
 	}
@@ -163,7 +163,7 @@ func (p *PlayerHandlerPassthrough) state() *HttpState {
 	}
 
 	return &HttpState{
-		IsPlaying:       p.player.playing,
+		IsPlaying:       p.playing,
 		Name:            name,
 		Position:        position,
 		Length:          length,
@@ -175,11 +175,11 @@ func (p *PlayerHandlerPassthrough) state() *HttpState {
 func (p *PlayerHandlerPassthrough) handleCommand(req WebsocketApiRequest) {
 	switch req.Type {
 	case "toggle":
-		p.player.Command(TOGGLE)
+		p.Command(TOGGLE)
 	case "next":
-		p.player.Command(NEXT)
+		p.Command(NEXT)
 	case "previous":
-		p.player.Command(PREVIOUS)
+		p.Command(PREVIOUS)
 	case "slide":
 		duration_current_to_set, err := strconv.Atoi(req.Payload)
 		if err != nil {
@@ -187,13 +187,13 @@ func (p *PlayerHandlerPassthrough) handleCommand(req WebsocketApiRequest) {
 			return
 		}
 
-		if p.player.playing {
-			p.player.Command(TOGGLE)
+		if p.playing {
+			p.Command(TOGGLE)
 			//FIXME: replace sleep synchronizing the cancelfunc (as in: toggle is prohibited if a cancelfunc is running)
 			time.Sleep(50 * time.Millisecond)
 		}
 
-		track := p.player.getCurrent()
+		track := p.getCurrent()
 		length := track.length
 		duration := track.duration
 
@@ -206,27 +206,27 @@ func (p *PlayerHandlerPassthrough) handleCommand(req WebsocketApiRequest) {
 		}
 
 		track.SetPosition(position)
-		p.player.Command(TOGGLE)
+		p.Command(TOGGLE)
 	case "rfidtracklearn":
 		path := req.Payload
 		slog.Debug("XXX: rfidtracklearn", "path", path)
-		rfidTrackLearn := p.player.NewRfidTrackLearn(path)
+		rfidTrackLearn := p.NewRfidTrackLearn(path)
 		if rfidTrackLearn == nil {
 			slog.Error("rfidtracklearn: could not find respective track for given payload", "payload", req.Payload)
 			return
 		}
-		p.player.rfidTrackLearn = rfidTrackLearn
+		p.rfidTrackLearn = rfidTrackLearn
 		go func() {
 			slog.Info("rfidTrackLearn: try to reset the player's rfid learn mode")
 			time.Sleep(10 * time.Second)
 
-			if p.player.rfidTrackLearn == nil {
+			if p.rfidTrackLearn == nil {
 				return
 			}
-			if p.player.rfidTrackLearn.TimeStamp != rfidTrackLearn.TimeStamp {
+			if p.rfidTrackLearn.TimeStamp != rfidTrackLearn.TimeStamp {
 				return
 			}
-			p.player.rfidTrackLearn = nil
+			p.rfidTrackLearn = nil
 		}()
 	default:
 		slog.Error("unknown WebsocketApiRequest type", "type", req.Type)
@@ -267,7 +267,7 @@ func (p *PlayerHandlerPassthrough) wsWriteState(conn *websocket.Conn) bool {
 }
 
 func (p *PlayerHandlerPassthrough) wsWriteHideRfidAlertBox(conn *websocket.Conn) bool {
-	if p.player.rfidTrackLearn != nil {
+	if p.rfidTrackLearn != nil {
 		// nothing to un-show/hide
 		return true
 	}
@@ -351,7 +351,7 @@ func InitHttpHandlers(p *Player) error {
 	http.HandleFunc("/img/", assetsFileServer)
 	http.HandleFunc("/js/", assetsFileServer)
 	http.HandleFunc("/fonts/", assetsFileServer)
-	phPassthrough := &PlayerHandlerPassthrough{player: p}
+	phPassthrough := &PlayerHandlerPassthrough{p}
 	http.HandleFunc("/", phPassthrough.rootHandler)
 	http.HandleFunc("/ws", phPassthrough.wsHandler)
 
