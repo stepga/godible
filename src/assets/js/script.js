@@ -1,3 +1,38 @@
+function initializeWebsocket(websocket) {
+	if (typeof(websocket) == 'undefined' || websocket == null) {
+		console.log('initialize new websocket connection')
+		websocket = new WebSocket("ws://"+window.location.host+"/ws");
+	}
+	websocket.onmessage = function(event) {
+		let data = JSON.parse(event.data);
+		switch (data['type']) {
+			case "state":
+				// TODO: implement me
+				//updateUI(data['payload']);
+				break;
+			case "rows":
+				// TODO: implement me
+				//updateTable(data['payload']);
+				break;
+			case "hiderfidalertbox":
+				// TODO: implement me
+				//hideAlertBox(true, "");
+				break;
+			default:
+				console.error("websocket: unknown api request type '" + data['type'] + "'")
+		}
+	}
+	websocket.onerror = function(event) {
+		console.error("websocket error: " + event.data);
+	}
+}
+
+function registerAlertBoxCloseButton() {
+	$("#alertBoxCloseBtn").on("click", function() {
+		$("#alertBox").toggle(false)
+	});
+}
+
 function registerFilterSearch() {
 	$("#filterInput").on("keyup", function() {
 		var filterSearchString = $(this).val().toLowerCase();
@@ -25,47 +60,12 @@ function registerFilterSearch() {
 	});
 }
 
-function initializeWebsocket(websocket) {
-	if (typeof(websocket) == 'undefined' || websocket == null) {
-		console.log('initialize new websocket connection')
-		websocket = new WebSocket("ws://"+window.location.host+"/ws");
-	}
-	websocket.onmessage = function(event) {
-		let data = JSON.parse(event.data);
-		switch (data['type']) {
-			//TODO
-			//case "state":
-			//	updateUI(data['payload']);
-			//	break;
-			//case "rows":
-			//	updateTable(data['payload']);
-			//	break;
-			//case "hiderfidalertbox":
-			//	hideAlertBox(true, "");
-			//	break;
-			default:
-				console.error("websocket: unknown api request type '" + data['type'] + "'")
-		}
-	}
-	websocket.onerror = function(event) {
-		console.error("websocket error: " + event.data);
-	}
-}
-
-function registerAlertBoxCloseButton() {
-	$("#alertBoxCloseBtn").on("click", function() {
-		$("#alertBox").toggle(false)
-	});
-}
-
 $(document).ready(function(){
 	registerFilterSearch();
 	registerAlertBoxCloseButton();
 	// TODO:
 	// - slider
 	// - table tbody hiding
-	//
-	//
 	var websocket;
 	initializeWebsocket(websocket);
 });
