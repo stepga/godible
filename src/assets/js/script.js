@@ -1,4 +1,4 @@
-function initializeWebsocket(websocket) {
+function initializeWebsocket() {
 	if (typeof(websocket) == 'undefined' || websocket == null) {
 		console.log('initialize new websocket connection')
 		websocket = new WebSocket("ws://"+window.location.host+"/ws");
@@ -60,12 +60,13 @@ function registerFilterSearch() {
 	});
 }
 
+var websocket;
+
 $(document).ready(function(){
 	registerFilterSearch();
 	registerAlertBoxCloseButton();
 	// TODO:
 	// - slider
 	// - table tbody hiding
-	var websocket;
-	initializeWebsocket(websocket);
+	initializeWebsocket();
 });
