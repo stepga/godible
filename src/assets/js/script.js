@@ -35,12 +35,12 @@ function registerAlertBoxCloseButton() {
 
 function registerFilterSearch() {
 	$("#filterInput").on("keyup", function() {
-		var filterSearchString = $(this).val().toLowerCase();
+		let filterSearchString = $(this).val().toLowerCase();
 		$("tbody tr").filter(function() {
 			// directory of iterated row matches the search:
 			// show all corresponding rows
-			var directoryRow = $(this).parent().find('tr').eq(0);
-			var directoryRowText = directoryRow.text().toLowerCase();
+			let directoryRow = $(this).parent().find('tr').eq(0);
+			let directoryRowText = directoryRow.text().toLowerCase();
 			if (directoryRowText.indexOf(filterSearchString) > -1) {
 				$(this).toggle(true);
 				return;
@@ -48,8 +48,8 @@ function registerFilterSearch() {
 
 			// iterated row (may also be the directory row) matches the search:
 			// show row and its corresponding directory row
-			var row = $(this);
-			var rowText = row.text().toLowerCase();
+			let row = $(this);
+			let rowText = row.text().toLowerCase();
 			if (rowText.indexOf(filterSearchString) > -1) {
 				$(this).toggle(true);
 				directoryRow.toggle(true);
