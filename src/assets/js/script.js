@@ -44,16 +44,23 @@ function initializeWebsocket(websocket) {
 			//	hideAlertBox(true, "");
 			//	break;
 			default:
-				console.log("unknown websocket api request type: " + data['type'])
+				console.error("websocket: unknown api request type '" + data['type'] + "'")
 		}
 	}
 	websocket.onerror = function(event) {
-		console.log("WebSocket error: " + event.data);
+		console.error("websocket error: " + event.data);
 	}
+}
+
+function registerAlertBoxCloseButton() {
+	$("#alertBoxCloseBtn").on("click", function() {
+		$("#alertBox").toggle(false)
+	});
 }
 
 $(document).ready(function(){
 	registerFilterSearch();
+	registerAlertBoxCloseButton();
 	// TODO:
 	// - slider
 	// - table tbody hiding
