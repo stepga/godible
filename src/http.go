@@ -2,6 +2,7 @@ package godible
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -38,11 +39,24 @@ var upgrader = websocket.Upgrader{
 
 type Row struct {
 	Fullpath        string `json:"fullpath"`
+	FullpathHashSum string `json:"fullpath_hash_sum"`
 	Basename        string `json:"basename"`
 	Dirname         string `json:"dirname"`
+	DirnameHashSum  string `json:"dirname_hash_sum"`
 	CurrentSeconds  int64  `json:"current_seconds"`
 	DurationSeconds int64  `json:"duration_seconds"`
 	RfidUid         string `json:"rfid_uid"`
+	HashSum         string `json:"hash_sum"`
+}
+
+func (row *Row) setHashSum() error {
+	row.HashSum = ""
+	jsonEnc, err := json.Marshal(row)
+	if err != nil {
+		return err
+	}
+	row.HashSum = fmt.Sprintf("%x", sha1.Sum(jsonEnc))
+	return nil
 }
 
 type PlayerHandlerPassthrough struct {
@@ -64,14 +78,21 @@ func trackDirname(track *Track) string {
 }
 
 func (p *PlayerHandlerPassthrough) trackToRow(track *Track) Row {
-	return Row{
+	row := Row{
 		Fullpath:        track.path,
+		FullpathHashSum: fmt.Sprintf("%x", sha1.Sum([]byte(track.path))),
 		Basename:        trackBasename(track),
 		Dirname:         trackDirname(track),
+		DirnameHashSum:  fmt.Sprintf("%x", sha1.Sum([]byte(trackDirname(track)))),
 		CurrentSeconds:  track.CurrentSeconds(),
 		DurationSeconds: track.duration,
 		RfidUid:         p.GetRfidUidForTrack(track),
 	}
+	err := row.setHashSum()
+	if err != nil {
+		slog.Error("failed to calculate hash sum for row", "row", row, "err", err)
+	}
+	return row
 }
 
 func (p *PlayerHandlerPassthrough) trackListToRows() []Row {
