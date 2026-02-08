@@ -64,3 +64,8 @@
   /* needed due to `.btn` setting `position: relative' (stacking context changed) */
   z-index: 2;
 }
+
+/* suppress linebreaks within the table headers */
+th {
+  white-space: nowrap;
+}

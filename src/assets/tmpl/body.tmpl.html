@@ -1,7 +1,7 @@
 <body>
 
 	<!--TODO: via `$('.alert').eq(0).toggle(false)` `display:none` is toggled, $().alert('close') would remove the alert from the DOM-->
-	<div id="alertBox" class="alert alert-danger alert-top-sticky" role="alert">
+	<div id="alertBox" class="alert alert-danger alert-top-sticky" role="alert" style="display:none;">
 		<span id="alertBoxCloseBtn" class="closebtn">&times;</span>
 		<strong>Lerne RFID-UID für:</strong>
 		<span id="alertBoxTrackName">Track Name</span>
@@ -54,8 +54,8 @@
 			<thead>
 				<tr>
 					<th>Dateiname</th>
-					<th>Position</th>
-					<th>RFID-Tag</th>
+					<th class="text-center">Position</th>
+					<th class="text-center">RFID-Tag</th>
 				</tr>
 			</thead>
 		</table>

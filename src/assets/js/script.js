@@ -13,8 +13,8 @@ const createRowHTML = ({
   data-fullpath="${fullpath}"
   data-hash_sum="${hash_sum}">
   <td>${basename}</td>
-  <td>${current_seconds} / ${duration_seconds}</td>
-  <td class="buttons">
+  <td class="text-center">${current_seconds} / ${duration_seconds}</td>
+  <td class="text-center">
     <button
       id="rfid_button_${fullpath_hash_sum}"
       class="btn btn-warning mb-1"
@@ -33,7 +33,7 @@ function createRowTbody(rowStruct) {
 		class="table-group-divider">
 		<tr>
 			<th colspan=2>${rowStruct['dirname']}</th>
-			<td>
+			<td class="text-center">
 			<button id="rfid_button_${rowStruct['dirname_hash_sum']}"
 				class="btn btn-warning mb-1"
 				type="button">
