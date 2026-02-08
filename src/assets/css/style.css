@@ -62,5 +62,5 @@
   position: sticky;
   top: 0;
   /* needed due to `.btn` setting `position: relative' (stacking context changed) */
-  z-index: 1;
+  z-index: 2;
 }
