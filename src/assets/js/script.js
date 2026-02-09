@@ -26,6 +26,93 @@ const createRowHTML = ({
   </td>
 </tr>`;
 
+
+// ----------
+// TODO order
+// ----------
+// 1. updateUI
+// 2. slider
+// 3. rfid
+
+function initializePlayerUI() {
+	// TODO: implement me
+
+	//let slider = document.getElementById("slider");
+	//slider.oninput = function() {
+	//        const time_current = document.getElementById("time_current");
+	//        time_current.textContent = secondsToDateStr(slider.value);
+	//}
+
+	//function downEvent() {
+	//        time_current_lock = true;
+	//}
+	//slider.onmousedown = downEvent
+	//slider.ontouchstart = downEvent
+
+	//function upEvent() {
+	//        const time_current_date_str = document.getElementById("time_current").textContent;
+	//        const time_current_seconds = dateStrToSeconds(time_current_date_str);
+	//        time_current_lock = false;
+	//        websocket.send('{ "type": "slide", "payload": "' + time_current_seconds + '"}');
+	//}
+	//slider.onmouseup = upEvent
+	//slider.ontouchend = upEvent
+
+	//document.getElementById("previous").addEventListener('click', function() {
+	//        websocket.send('{ "type": "previous", "payload": ""}');
+	//});
+	//document.getElementById("toggle").addEventListener('click', function() {
+	//        websocket.send('{ "type": "toggle", "payload": ""}');
+	//        is_playing = !is_playing;
+	//        setToggleButton();
+	//});
+	//document.getElementById("next").addEventListener('click', function() {
+	//        websocket.send('{ "type": "next", "payload": ""}');
+	//});
+	//document.getElementById("alertBoxCloseBtn").addEventListener('click', function() {
+	//        hideAlertBox(true, "");
+	//});
+}
+
+
+function updateUI(data) {
+	// TODO: implement me
+
+	//if (data == null || data == "null") {
+	//	//console.log("updateUI: no data passed");
+	//	return;
+	//}
+	//let json = JSON.parse(data);
+	//let title = document.getElementById("title");
+	//let time_current = document.getElementById("time_current");
+	//let time_total = document.getElementById("time_total");
+	//let slider = document.getElementById("slider");
+
+	//// TODO: update fields only if content really changed
+	//title.textContent = json.name;
+	//time_total.textContent = secondsToDateStr(json.duration);
+	//slider.max = json.duration;
+	//if (time_current_lock == false) {
+	//	time_current.textContent = secondsToDateStr(json.duration_current);
+	//	slider.value = json.duration_current;
+	//}
+
+	//is_playing = json.is_playing;
+	//setToggleButton();
+}
+
+function updateRfidButtonEvents() {
+	// TODO: implement me
+
+	// - iterate over all buttons
+	// - set click event if unset
+	// - function:
+	//   - websocket send rfidtracklearn with fullpath payload
+	//   - backend must answer alertbox info (via websocket 'state'?): track name, seconds left, etc
+	//     -> display alert box in frontend
+	//     -> disable other rfid buttons
+}
+
 /* create a row's respective directory tbody, in which the row can be inserted */
 function createRowTbody(rowStruct) {
 	$(`<tbody
@@ -79,6 +166,7 @@ function updateTable(data) {
 		// insert new track row
 		$(rowHTML).appendTo(tbody);
 	}
+	updateRfidButtonEvents();
 }
 
 function initializeWebsocket() {
@@ -97,8 +185,7 @@ function initializeWebsocket() {
 				//updateUI(data['payload']);
 				break;
 			case "hiderfidalertbox":
-				// TODO: implement me
-				//hideAlertBox(true, "");
+				// TODO: remove me and implement this also in 'state'
 				break;
 			default:
 				console.error("websocket: unknown api request type '" + data['type'] + "'")
@@ -147,8 +234,6 @@ var websocket;
 $(document).ready(function(){
 	registerFilterSearch();
 	registerAlertBoxCloseButton();
-	// TODO:
-	// - slider
-	// - table tbody hiding
 	initializeWebsocket();
+	initializePlayerUI();
 });
