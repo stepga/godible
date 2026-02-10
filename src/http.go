@@ -172,7 +172,7 @@ func (p *PlayerHandlerPassthrough) state() *HttpState {
 		return nil
 	}
 
-	name := current.path
+	name := trackBasename(current)
 	position := current.position
 	length := current.length
 	duration := current.duration

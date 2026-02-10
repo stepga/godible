@@ -1,3 +1,11 @@
+/*
+ * time_current_lock is needed to prevent updateUI writing time_current during
+ * a currently happening interaction with the player's slider
+ */
+var time_current_lock = false;
+/* is_playing is needed to set the correct play/pause icon */
+var is_playing = false;
+
 const createRowHTML = ({
 	basename,
 	current_seconds,
@@ -30,7 +38,7 @@ const createRowHTML = ({
 // ----------
 // TODO order
 // ----------
-// 1. updateUI
+// 1. initializePlayerUI
 // 2. slider
 // 3. rfid
 
@@ -40,7 +48,7 @@ function initializePlayerUI() {
 	//let slider = document.getElementById("slider");
 	//slider.oninput = function() {
 	//        const time_current = document.getElementById("time_current");
-	//        time_current.textContent = secondsToDateStr(slider.value);
+	//        time_current.textContent = secondsToHHMMSS(slider.value);
 	//}
 
 	//function downEvent() {
@@ -75,30 +83,53 @@ function initializePlayerUI() {
 }
 
 
+function secondsToHHMMSS(seconds) {
+	let date = new Date(null);
+	date.setSeconds(seconds);
+	// return MM:SS format if less than one hour
+	if (seconds < 60*60) {
+		return date.toISOString().slice(14, 19);
+	}
+	// otherwise return HH:MM:SS format
+	return date.toISOString().slice(11, 19);
+}
+
+function setToggleIcon() {
+	if (is_playing) {
+		$("#toggleIcon").removeClass("fa-play");
+		$("#toggleIcon").addClass("fa-pause");
+	} else {
+		$("#toggleIcon").removeClass("fa-pause");
+		$("#toggleIcon").addClass("fa-play");
+	}
+}
+
 function updateUI(data) {
-	// TODO: implement me
+	if (data == null || data == "null") {
+		console.error("updateUI: no data passed");
+		return;
+	}
 
-	//if (data == null || data == "null") {
-	//	//console.log("updateUI: no data passed");
-	//	return;
-	//}
-	//let json = JSON.parse(data);
-	//let title = document.getElementById("title");
-	//let time_current = document.getElementById("time_current");
-	//let time_total = document.getElementById("time_total");
-	//let slider = document.getElementById("slider");
+	let json;
+	try {
+		json = JSON.parse(data);
+	} catch (e) {
+		console.error("updateUI: " + e);
+		return;
+	}
 
-	//// TODO: update fields only if content really changed
-	//title.textContent = json.name;
-	//time_total.textContent = secondsToDateStr(json.duration);
-	//slider.max = json.duration;
-	//if (time_current_lock == false) {
-	//	time_current.textContent = secondsToDateStr(json.duration_current);
-	//	slider.value = json.duration_current;
-	//}
+	// TODO: update fields only if content really changed
+	$("#track_name").html(json.name);
+	$("#time_total").html(secondsToHHMMSS(json.duration));
+	$("#slider").attr({ "max": json.duration });
+	if (time_current_lock == false) {
+		$("#time_current").html(secondsToHHMMSS(json.duration_current));
+		// FIXME: setting the slider manually breaks updating the shown slider bar 'value' somehow ... 0.o
+		$("#slider").attr({ "value": json.duration_current });
+	}
 
-	//is_playing = json.is_playing;
-	//setToggleButton();
+	is_playing = json.is_playing;
+	setToggleIcon();
 }
 
 function updateRfidButtonEvents() {
@@ -181,8 +212,7 @@ function initializeWebsocket() {
 				updateTable(data['payload']);
 				break;
 			case "state":
-				// TODO: implement me
-				//updateUI(data['payload']);
+				updateUI(data['payload']);
 				break;
 			case "hiderfidalertbox":
 				// TODO: remove me and implement this also in 'state'
