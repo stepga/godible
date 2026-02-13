@@ -38,50 +38,58 @@ const createRowHTML = ({
 // ----------
 // TODO order
 // ----------
-// 1. initializePlayerUI
-// 2. slider
-// 3. rfid
+// 1. rfid button events
+// 2. rfid alertbox
 
 function initializePlayerUI() {
+	let slider = $("#slider");
+	slider.on("input", function() {
+		$("#time_current").html(secondsToHHMMSS(slider.val()));
+	});
+
+	function sliderDownEvent() {
+	        time_current_lock = true;
+	}
+	slider.on("mousedown", sliderDownEvent);
+	slider.on("touchstart", sliderDownEvent);
+
+	function sliderUpEvent() {
+		const time_current_date_str = $("#time_current").text();
+		const time_current_seconds = HHMMSSToSeconds(time_current_date_str);
+		time_current_lock = false;
+		websocket.send('{ "type": "slide", "payload": "' + time_current_seconds + '"}');
+	}
+	slider.on("mouseup", sliderUpEvent);
+	slider.on("touchend", sliderUpEvent);
+
+	$("#previous").on("click", function() {
+		websocket.send('{ "type": "previous", "payload": ""}');
+	});
+	$("#next").on("click", function() {
+		websocket.send('{ "type": "next", "payload": ""}');
+	});
+	$("#toggle").on("click", function() {
+		websocket.send('{ "type": "toggle", "payload": ""}');
+		is_playing = !is_playing;
+		setToggleIcon();
+	});
 	// TODO: implement me
-
-	//let slider = document.getElementById("slider");
-	//slider.oninput = function() {
-	//        const time_current = document.getElementById("time_current");
-	//        time_current.textContent = secondsToHHMMSS(slider.value);
-	//}
-
-	//function downEvent() {
-	//        time_current_lock = true;
-	//}
-	//slider.onmousedown = downEvent
-	//slider.ontouchstart = downEvent
-
-	//function upEvent() {
-	//        const time_current_date_str = document.getElementById("time_current").textContent;
-	//        const time_current_seconds = dateStrToSeconds(time_current_date_str);
-	//        time_current_lock = false;
-	//        websocket.send('{ "type": "slide", "payload": "' + time_current_seconds + '"}');
-	//}
-	//slider.onmouseup = upEvent
-	//slider.ontouchend = upEvent
-
-	//document.getElementById("previous").addEventListener('click', function() {
-	//        websocket.send('{ "type": "previous", "payload": ""}');
-	//});
-	//document.getElementById("toggle").addEventListener('click', function() {
-	//        websocket.send('{ "type": "toggle", "payload": ""}');
-	//        is_playing = !is_playing;
-	//        setToggleButton();
-	//});
-	//document.getElementById("next").addEventListener('click', function() {
-	//        websocket.send('{ "type": "next", "payload": ""}');
-	//});
 	//document.getElementById("alertBoxCloseBtn").addEventListener('click', function() {
 	//        hideAlertBox(true, "");
 	//});
 }
 
+function HHMMSSToSeconds(date) {
+    let arr = date.split(':');
+    let ret = 0;
+    let seconds_multiplier = 1;
+
+    while (arr.length > 0) {
+        ret += seconds_multiplier * parseInt(arr.pop(), 10);
+        seconds_multiplier *= 60;
+    }
+    return ret;
+}
 
 function secondsToHHMMSS(seconds) {
 	let date = new Date(null);
@@ -124,8 +132,7 @@ function updateUI(data) {
 	$("#slider").attr({ "max": json.duration });
 	if (time_current_lock == false) {
 		$("#time_current").html(secondsToHHMMSS(json.duration_current));
-		// FIXME: setting the slider manually breaks updating the shown slider bar 'value' somehow ... 0.o
-		$("#slider").attr({ "value": json.duration_current });
+		$("#slider").val(json.duration_current);
 	}
 
 	is_playing = json.is_playing;
