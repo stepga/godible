@@ -38,13 +38,16 @@ const createRowHTML = ({
 // ----------
 // TODO order
 // ----------
-// 1. rfid button events
-// 2. rfid alertbox
+// 1. backend should send via 'state' whether rfidlearning is in progess (incl. details)
+//    - track name
+//    - seconds left
+// 2. frontend displays info in alertBox (no timeouts & further locking needed)
+//    - while learning new track, disable all rfid buttons
 
 function initializePlayerUI() {
 	let slider = $("#slider");
 	slider.on("input", function() {
-		$("#time_current").html(secondsToHHMMSS(slider.val()));
+		$("#time_current").text(secondsToHHMMSS(slider.val()));
 	});
 
 	function sliderDownEvent() {
@@ -127,28 +130,32 @@ function updateUI(data) {
 	}
 
 	// TODO: update fields only if content really changed
-	$("#track_name").html(json.name);
-	$("#time_total").html(secondsToHHMMSS(json.duration));
+	$("#track_name").text(json.name);
+	$("#time_total").text(secondsToHHMMSS(json.duration));
 	$("#slider").attr({ "max": json.duration });
 	if (time_current_lock == false) {
-		$("#time_current").html(secondsToHHMMSS(json.duration_current));
+		$("#time_current").text(secondsToHHMMSS(json.duration_current));
 		$("#slider").val(json.duration_current);
 	}
 
 	is_playing = json.is_playing;
 	setToggleIcon();
+
+	// TODO: set alertBox if json.rfid_track_learn is not empty
 }
 
-function updateRfidButtonEvents() {
-	// TODO: implement me
-
-	// - iterate over all buttons
-	// - set click event if unset
-	// - function:
-	//   - websocket send rfidtracklearn with fullpath payload
-	//   - backend must answer alertbox info (via websocket 'state'?): track name, seconds left, etc
-	//     -> display alert box in frontend
-	//     -> disable other rfid buttons
+function updateRfidButtonsClickEvent() {
+	$('button[id*=rfid_]:not(.clickEventHandlerRegistered)').each(function(_index) {
+		$(this).on("click", function() {
+			const msg = JSON.stringify({
+				type: "rfidtracklearn",
+				payload: $(this).parent().parent().data('fullpath')
+			});
+			console.log('XXX send: ' + msg);
+			websocket.send(msg);
+		});
+		$(this).addClass("clickEventHandlerRegistered");
+	});
 }
 
 /* create a row's respective directory tbody, in which the row can be inserted */
@@ -204,7 +211,7 @@ function updateTable(data) {
 		// insert new track row
 		$(rowHTML).appendTo(tbody);
 	}
-	updateRfidButtonEvents();
+	updateRfidButtonsClickEvent();
 }
 
 function initializeWebsocket() {

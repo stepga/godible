@@ -164,6 +164,7 @@ type HttpState struct {
 	Length          int64  `json:"length"`
 	Duration        int64  `json:"duration"`
 	DurationCurrent int64  `json:"duration_current"`
+	RfidTrackLearn  string `json:"rfid_track_learn"`
 }
 
 func (p *PlayerHandlerPassthrough) state() *HttpState {
@@ -182,6 +183,10 @@ func (p *PlayerHandlerPassthrough) state() *HttpState {
 		tmp = tmp * float64(duration)
 		durationCurrent = int64(tmp)
 	}
+	rfidTrackLearn := ""
+	if p.rfidTrackLearn != nil {
+		rfidTrackLearn = p.rfidTrackLearn.TrackPath
+	}
 
 	return &HttpState{
 		IsPlaying:       p.playing,
@@ -190,6 +195,7 @@ func (p *PlayerHandlerPassthrough) state() *HttpState {
 		Length:          length,
 		Duration:        duration,
 		DurationCurrent: durationCurrent,
+		RfidTrackLearn:  rfidTrackLearn,
 	}
 }
 
@@ -231,6 +237,9 @@ func (p *PlayerHandlerPassthrough) handleCommand(req WebsocketApiRequest) {
 	case "rfidtracklearn":
 		path := req.Payload
 		slog.Debug("XXX: rfidtracklearn", "path", path)
+		// TODO: switch cases: payload is
+		// - absolute track path, OR
+		// - relative dir path (-> resolve to first track within dir)
 		rfidTrackLearn := p.NewRfidTrackLearn(path)
 		if rfidTrackLearn == nil {
 			slog.Error("rfidtracklearn: could not find respective track for given payload", "payload", req.Payload)

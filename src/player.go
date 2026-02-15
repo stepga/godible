@@ -24,6 +24,8 @@ const DATADIR = "/perm/godible-data/"
 
 type RfidTrackLearn struct {
 	TrackPath string
+	// TODO: Perhaps just Track?
+	// TODO: timestamp stuff can be deleted
 	TimeStamp int64
 }
 
