@@ -235,11 +235,11 @@ func (p *PlayerHandlerPassthrough) handleCommand(req WebsocketApiRequest) {
 		track.SetPosition(position)
 		p.Command(TOGGLE)
 	case "rfidtracklearn":
+		// TODO: re-implement me
+		// - if currently not already learning: set the track to learn
+		// - if payload is directory: save directory -> extend the data structs
 		path := req.Payload
 		slog.Debug("XXX: rfidtracklearn", "path", path)
-		// TODO: switch cases: payload is
-		// - absolute track path, OR
-		// - relative dir path (-> resolve to first track within dir)
 		rfidTrackLearn := p.NewRfidTrackLearn(path)
 		if rfidTrackLearn == nil {
 			slog.Error("rfidtracklearn: could not find respective track for given payload", "payload", req.Payload)
@@ -247,6 +247,7 @@ func (p *PlayerHandlerPassthrough) handleCommand(req WebsocketApiRequest) {
 		}
 		p.rfidTrackLearn = rfidTrackLearn
 		go func() {
+			// TODO: just introduce a cancelfunc here?
 			slog.Info("rfidTrackLearn: try to reset the player's rfid learn mode")
 			time.Sleep(10 * time.Second)
 

@@ -158,15 +158,15 @@ function updateRfidButtonsClickEvent() {
 	});
 }
 
-/* create a row's respective directory tbody, in which the row can be inserted */
-function createRowTbody(rowStruct) {
+/* create a track row's respective directory tbody, in which the row can be inserted. */
+function createRowTbody(row) {
 	$(`<tbody
-		id="${rowStruct['dirname_hash_sum']}"
+		id="${row['dirname_hash_sum']}"
 		class="table-group-divider">
-		<tr>
-			<th colspan=2>${rowStruct['dirname']}</th>
+		<tr data-fullpath="${row['dirname']}">
+			<th colspan=2>${row['dirname']}</th>
 			<td class="text-center">
-			<button id="rfid_button_${rowStruct['dirname_hash_sum']}"
+			<button id="rfid_button_${row['dirname_hash_sum']}"
 				class="btn btn-warning mb-1"
 				type="button">
 				<i class="fa fa-wifi"></i>
@@ -192,20 +192,22 @@ function updateTable(data) {
 
 	const rowsHTML = json.map(createRowHTML);
 	for (let [index, rowHTML] of rowsHTML.entries()) {
-		// update existing track rows
-		var element = $("#" + json[index]['fullpath_hash_sum']);
+		let rowStruct = json[index];
+
+		// update existing track row
+		var element = $("#" + rowStruct['fullpath_hash_sum']);
 		if (element.length !== 0) {
-			if (element.data('hash_sum') != json[index]['hash_sum']) {
+			if (element.data('hash_sum') != rowStruct['hash_sum']) {
 				element.replaceWith(rowHTML);
 			}
 			continue
 		}
 
-		// create directory tbodies if necessary
-		var tbody = $("#" + json[index]['dirname_hash_sum']);
+		// create directory tbody if necessary
+		var tbody = $("#" + rowStruct['dirname_hash_sum']);
 		if (tbody.length === 0) {
-			createRowTbody(json[index]);
-			tbody = $("#" + json[index]['dirname_hash_sum']);
+			createRowTbody(rowStruct);
+			tbody = $("#" + rowStruct['dirname_hash_sum']);
 		}
 
 		// insert new track row
