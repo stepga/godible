@@ -163,8 +163,8 @@ function createRowTbody(row) {
 	$(`<tbody
 		id="${row['dirname_hash_sum']}"
 		class="table-group-divider">
-		<tr data-fullpath="${row['dirname']}">
-			<th colspan=2>${row['dirname']}</th>
+		<tr data-fullpath="${row['dirname_full']}">
+			<th colspan=2>${row['dirname_show']}</th>
 			<td class="text-center">
 			<button id="rfid_button_${row['dirname_hash_sum']}"
 				class="btn btn-warning mb-1"

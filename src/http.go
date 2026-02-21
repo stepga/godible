@@ -20,13 +20,6 @@ import (
 //go:embed assets/*
 var assetsFS embed.FS
 
-var templates = template.Must(
-	template.ParseFS(
-		assetsFS,
-		"assets/tmpl/header.tmpl.html",
-		"assets/tmpl/body.tmpl.html",
-	),
-)
 var playerWebGuiPort = 1234
 
 var upgrader = websocket.Upgrader{
@@ -41,8 +34,9 @@ type Row struct {
 	Fullpath        string `json:"fullpath"`
 	FullpathHashSum string `json:"fullpath_hash_sum"`
 	Basename        string `json:"basename"`
-	Dirname         string `json:"dirname"`
+	DirnameShow     string `json:"dirname_show"`
 	DirnameHashSum  string `json:"dirname_hash_sum"`
+	DirnameFull     string `json:"dirname_full"`
 	CurrentSeconds  int64  `json:"current_seconds"`
 	DurationSeconds int64  `json:"duration_seconds"`
 	RfidUid         string `json:"rfid_uid"`
@@ -50,9 +44,11 @@ type Row struct {
 }
 
 func (row *Row) setHashSum() error {
+	oldHashSum := row.HashSum
 	row.HashSum = ""
 	jsonEnc, err := json.Marshal(row)
 	if err != nil {
+		row.HashSum = oldHashSum
 		return err
 	}
 	row.HashSum = fmt.Sprintf("%x", sha1.Sum(jsonEnc))
@@ -68,8 +64,8 @@ func trackBasename(track *Track) string {
 	return strings.TrimSuffix(base, filepath.Ext(base))
 }
 
-func trackDirname(track *Track) string {
-	dir := filepath.Dir(track.path)
+func trackDirnameShow(track *Track) string {
+	dir := trackDirnameFull(track)
 	dir_without_datadir := strings.TrimPrefix(dir, strings.TrimSuffix(DATADIR, "/"))
 	if strings.HasPrefix(dir_without_datadir, "/") {
 		return dir_without_datadir
@@ -77,13 +73,18 @@ func trackDirname(track *Track) string {
 	return "/" + dir_without_datadir
 }
 
+func trackDirnameFull(track *Track) string {
+	return filepath.Dir(track.path)
+}
+
 func (p *PlayerHandlerPassthrough) trackToRow(track *Track) Row {
 	row := Row{
 		Fullpath:        track.path,
 		FullpathHashSum: fmt.Sprintf("%x", sha1.Sum([]byte(track.path))),
 		Basename:        trackBasename(track),
-		Dirname:         trackDirname(track),
-		DirnameHashSum:  fmt.Sprintf("%x", sha1.Sum([]byte(trackDirname(track)))),
+		DirnameShow:     trackDirnameShow(track),
+		DirnameHashSum:  fmt.Sprintf("%x", sha1.Sum([]byte(trackDirnameShow(track)))),
+		DirnameFull:     trackDirnameFull(track),
 		CurrentSeconds:  track.CurrentSeconds(),
 		DurationSeconds: track.duration,
 		RfidUid:         p.GetRfidUidForTrack(track),
@@ -123,16 +124,6 @@ type Tbody struct {
 
 type Data struct {
 	Tbodies []Tbody
-}
-
-func (d *Data) addRow(header string, row Row) {
-	for i := range d.Tbodies {
-		if d.Tbodies[i].Header == header {
-			d.Tbodies[i].Rows = append(d.Tbodies[i].Rows, row)
-			return
-		}
-	}
-	d.Tbodies = append(d.Tbodies, Tbody{Header: header, Rows: []Row{row}})
 }
 
 func renderTemplate(w http.ResponseWriter, filename string, data *Data) {
