@@ -17,20 +17,20 @@ import (
 
 const (
 	resetPin             = "P1_22" // GPIO 25
-	irqPin               = "P1_12" // GPIO 18
+	irqPinName           = "P1_12" // GPIO 18
 	uidWaitDuration      = 5 * time.Second
 	readUIDSenderMaxFail = 10
 )
 
 type RfidDevice struct {
-	device        *mfrc522.Dev
+	*mfrc522.Dev
 	spiPortCloser spi.PortCloser
 }
 
 // Soft-stop the RFID chip and close the spi port.
 func (rfid *RfidDevice) Close() {
-	if rfid.device != nil {
-		err := rfid.device.Halt()
+	if rfid != nil {
+		err := rfid.Halt()
 		if err != nil {
 			slog.Error("rfid.Halt failed", "err", err)
 		}
@@ -44,10 +44,8 @@ func (rfid *RfidDevice) Close() {
 }
 
 func NewRfidDevice() (*RfidDevice, error) {
-	var err error
-	ret := RfidDevice{}
-
-	if err = initHostDrivers(); err != nil {
+	err := initHostDrivers()
+	if err != nil {
 		return nil, err
 	}
 
@@ -55,39 +53,35 @@ func NewRfidDevice() (*RfidDevice, error) {
 	// XXX: with extra bootloader "spi channel select setting",
 	//      e.g.: "dtoverlay=spi1-1cs,cs0_pin=12",
 	//      the bus changes to "SPI1.0" (which is better passed explicitly)
-	ret.spiPortCloser, err = spireg.Open("")
+	spiPort, err := spireg.Open("")
 	if err != nil {
 		return nil, fmt.Errorf("spireg.Open: %w", err)
 	}
 
-	// get GPIO reset pin from its name
 	var gpioResetPin gpio.PinOut = gpioreg.ByName(resetPin)
 	if gpioResetPin == nil {
-		ret.Close()
+		spiPort.Close()
 		return nil, fmt.Errorf("gpioreg.ByName: %w", err)
 	}
 
-	// get GPIO irq pin from its name
-	var gpioIRQPin gpio.PinIn = gpioreg.ByName(irqPin)
+	var gpioIRQPin gpio.PinIn = gpioreg.ByName(irqPinName)
 	if gpioIRQPin == nil {
-		ret.Close()
+		spiPort.Close()
 		return nil, fmt.Errorf("gpioreg.ByName: %w", err)
 	}
 
-	ret.device, err = mfrc522.NewSPI(ret.spiPortCloser, gpioResetPin, gpioIRQPin, mfrc522.WithSync())
+	rfidSpiDevice, err := mfrc522.NewSPI(spiPort, gpioResetPin, gpioIRQPin, mfrc522.WithSync())
 	if err != nil {
-		ret.Close()
+		spiPort.Close()
 		return nil, fmt.Errorf("mfrc522.NewSPI: %w", err)
 	}
+	rfidSpiDevice.SetAntennaGain(7)
 
-	// setting the antenna signal strength, signal strength from 0 to 7
-	ret.device.SetAntennaGain(7)
-
-	return &ret, nil
+	return &RfidDevice{rfidSpiDevice, spiPort}, nil
 }
 
-func (rfid *RfidDevice) ReadUID(duration time.Duration) (string, error) {
-	data, err := rfid.device.ReadUID(duration)
+func (rfid *RfidDevice) ReadUIDString(duration time.Duration) (string, error) {
+	data, err := rfid.ReadUID(duration)
 	if err != nil {
 		return "", err
 	}
@@ -105,27 +99,27 @@ func errIsRfidTimeout(err error) bool {
 }
 
 // RfidUidSender continuously reads RFID UIDs and passes them into its
-// channel (uidPass). On more than `readUIDSenderMaxFail` consecutive errors,
+// channel `uidPass`. On more than `readUIDSenderMaxFail` consecutive errors,
 // the goroutine will return.
 func (rfid *RfidDevice) RfidUidSender(uidPass chan string) {
 	failCounter := 0
 	go func() {
 		for {
 			time.Sleep(1 * time.Second)
-			ret, err := rfid.ReadUID(uidWaitDuration)
+			ret, err := rfid.ReadUIDString(uidWaitDuration)
 			if err == nil {
 				failCounter = 0
 				if len(ret) != 0 {
-					slog.Info("RfidUidSender rfid.ReadUID)", "uid", ret)
+					slog.Info("RfidUidSender rfid.ReadUIDString)", "uid", ret)
 					uidPass <- ret
 				}
 				continue
 			}
 			if !errIsRfidTimeout(err) {
 				failCounter = failCounter + 1
-				slog.Error("rfid.ReadUID failed", "err", err, "failCounter", failCounter)
+				slog.Error("rfid.ReadUIDString failed", "err", err, "failCounter", failCounter)
 				if failCounter > readUIDSenderMaxFail {
-					slog.Error("rfid.Read reached maximum amount of errors: abort")
+					slog.Error("rfid.ReadUIDString reached maximum amount of errors: abort")
 					return
 				}
 			}
