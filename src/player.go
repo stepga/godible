@@ -93,7 +93,7 @@ func (player *Player) findElementForTrackPath(path string) *list.Element {
 		if track == nil {
 			continue
 		}
-		if track.path == path {
+		if track.Path == path {
 			return element
 		}
 		element = element.Next()
@@ -293,7 +293,7 @@ func (player *Player) GetTrackWithRfidUid(rfidUid string) *list.Element {
 }
 
 func (player *Player) GetRfidUidForTrack(track *Track) string {
-	if rfidUid, ok := trackPathRfidUidMap[track.path]; ok {
+	if rfidUid, ok := trackPathRfidUidMap[track.Path]; ok {
 		return rfidUid
 	}
 	return ""

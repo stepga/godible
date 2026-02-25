@@ -56,7 +56,7 @@ func (w WavReader) Duration() (int64, error) {
 }
 
 func wavTrackReader(track *Track) (TrackReader, error) {
-	file, err := os.Open(track.path)
+	file, err := os.Open(track.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (m Mp3Reader) Duration() (int64, error) {
 }
 
 func mp3TrackReader(track *Track) (TrackReader, error) {
-	file, err := os.Open(track.path)
+	file, err := os.Open(track.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +159,7 @@ func (o OggReader) Duration() (int64, error) {
 }
 
 func oggTrackReader(track *Track) (TrackReader, error) {
-	file, err := os.Open(track.path)
+	file, err := os.Open(track.Path)
 	if err != nil {
 		return nil, err
 	}

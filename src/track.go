@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 type Track struct {
-	path     string
+	Path     string
 	position int64
 	length   int64
 	duration int64
@@ -31,7 +33,7 @@ func (t *Track) String() string {
 	if t == nil {
 		return "nil"
 	}
-	return fmt.Sprintf("{path: %s, position: %d, length: %d}", t.path, t.position, t.length)
+	return fmt.Sprintf("Track{path: %s, position: %d, length: %d}", t.Path, t.position, t.length)
 }
 
 func (t *Track) CurrentSeconds() int64 {
@@ -41,6 +43,24 @@ func (t *Track) CurrentSeconds() int64 {
 	var tmp float64 = float64(t.position) / float64(t.length)
 	tmp = tmp * float64(t.duration)
 	return int64(tmp)
+}
+
+func (t *Track) Basename() string {
+	base := filepath.Base(t.Path)
+	return strings.TrimSuffix(base, filepath.Ext(base))
+}
+
+func (t *Track) DirnameShow() string {
+	dir := t.DirnameFull()
+	dir_without_datadir := strings.TrimPrefix(dir, strings.TrimSuffix(DATADIR, "/"))
+	if strings.HasPrefix(dir_without_datadir, "/") {
+		return dir_without_datadir
+	}
+	return "/" + dir_without_datadir
+}
+
+func (t *Track) DirnameFull() string {
+	return filepath.Dir(t.Path)
 }
 
 func isRegularFile(path string) (bool, error) {
@@ -65,7 +85,7 @@ func NewTrack(path string) (*Track, error) {
 		return nil, err
 	}
 	t := Track{
-		path:     path,
+		Path:     path,
 		metadata: metadata,
 	}
 
@@ -116,7 +136,7 @@ func CreateTrackList(tl *list.List, root string) error {
 				continue
 			}
 			if !sampleRateSupported(t.metadata.sampleRate) {
-				slog.Error("skip track: unsupported sample rate", "path", t.path, "sample rate", t.metadata.sampleRate)
+				slog.Error("skip track: unsupported sample rate", "path", t.Path, "sample rate", t.metadata.sampleRate)
 				continue
 			}
 			tl.PushBack(t)

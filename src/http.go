@@ -8,9 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"path/filepath"
 	"strconv"
-	"strings"
 	"text/template"
 	"time"
 
@@ -59,32 +57,14 @@ type PlayerHandlerPassthrough struct {
 	*Player
 }
 
-func trackBasename(track *Track) string {
-	base := filepath.Base(track.path)
-	return strings.TrimSuffix(base, filepath.Ext(base))
-}
-
-func trackDirnameShow(track *Track) string {
-	dir := trackDirnameFull(track)
-	dir_without_datadir := strings.TrimPrefix(dir, strings.TrimSuffix(DATADIR, "/"))
-	if strings.HasPrefix(dir_without_datadir, "/") {
-		return dir_without_datadir
-	}
-	return "/" + dir_without_datadir
-}
-
-func trackDirnameFull(track *Track) string {
-	return filepath.Dir(track.path)
-}
-
 func (p *PlayerHandlerPassthrough) trackToRow(track *Track) Row {
 	row := Row{
-		Fullpath:        track.path,
-		FullpathHashSum: fmt.Sprintf("%x", sha1.Sum([]byte(track.path))),
-		Basename:        trackBasename(track),
-		DirnameShow:     trackDirnameShow(track),
-		DirnameHashSum:  fmt.Sprintf("%x", sha1.Sum([]byte(trackDirnameShow(track)))),
-		DirnameFull:     trackDirnameFull(track),
+		Fullpath:        track.Path,
+		FullpathHashSum: fmt.Sprintf("%x", sha1.Sum([]byte(track.Path))),
+		Basename:        track.Basename(),
+		DirnameShow:     track.DirnameShow(),
+		DirnameHashSum:  fmt.Sprintf("%x", sha1.Sum([]byte(track.DirnameFull()))),
+		DirnameFull:     track.DirnameFull(),
 		CurrentSeconds:  track.CurrentSeconds(),
 		DurationSeconds: track.duration,
 		RfidUid:         p.GetRfidUidForTrack(track),
@@ -164,7 +144,7 @@ func (p *PlayerHandlerPassthrough) state() *HttpState {
 		return nil
 	}
 
-	name := trackBasename(current)
+	name := current.Basename()
 	position := current.position
 	length := current.length
 	duration := current.duration
