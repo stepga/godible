@@ -133,7 +133,10 @@ function updateUI(data) {
 		$("#time_current").text(secondsToHHMMSS(json.duration_current));
 		$("#slider").val(json.duration_current);
 	}
-	// TODO: if json.rfid_track_training is not empty string, set alertBox
+
+	$("#alertBoxTrackName").text(json.rfid_track_training.name);
+	$("#alertBoxSeconds").text(json.rfid_track_training.time_left);
+	$("#alertBox").toggle(json.rfid_track_training.time_left > 0)
 
 	is_playing = json.is_playing;
 	setToggleIcon();
@@ -240,6 +243,7 @@ function initializeWebsocket() {
 function registerAlertBoxCloseButton() {
 	$("#alertBoxCloseBtn").on("click", function() {
 		$("#alertBox").toggle(false)
+		websocket.send('{ "type": "rfidtracklearnstop", "payload": ""}');
 	});
 }
 

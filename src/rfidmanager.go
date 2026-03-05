@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	TrackTrainingPeriod = 10 * time.Second
+	TrackTrainingSeconds = 10
 )
 
 // TODO: replace Track with struct that contains "Track" or "Directory and Track"
@@ -15,6 +15,15 @@ type TrackTrainer struct {
 	Track     *Track
 	TimeStamp int64
 	Done      bool
+	TimeLeft  int64
+}
+
+func newTrackTrainer(track *Track) *TrackTrainer {
+	return &TrackTrainer{
+		Track:     track,
+		TimeStamp: time.Now().UnixNano(),
+		TimeLeft:  TrackTrainingSeconds,
+	}
 }
 
 func (t *TrackTrainer) String() string {
@@ -77,26 +86,25 @@ func (rtm *RfidTrackManager) SetMapping(rfidUid string, track *Track) {
 	rtm.UidTrackMap[rfidUid] = &TrackMapping{Track: track, Directory: ""}
 }
 
-func (rtm *RfidTrackManager) resetTrackTrainer(oldTrack *TrackTrainer) {
-	slog.Debug("resetTrackTrainer: wait to reset the TrackTrainer", "oldTrack", oldTrack.String())
-	time.Sleep(TrackTrainingPeriod)
-	if rtm.TrackTrainer == nil || rtm.TrackTrainer.TimeStamp != oldTrack.TimeStamp {
-		slog.Debug("resetTrackTrainer: nothing to reset, training already completed")
-		return
+func (rtm *RfidTrackManager) runTrackTrainerCountdown(oldTrackTrainer *TrackTrainer) {
+	slog.Debug("runTrackTrainerCountdown: begin", "oldTrackTrainer", oldTrackTrainer.String())
+	for range TrackTrainingSeconds {
+		time.Sleep(1 * time.Second)
+		if rtm.TrackTrainer == nil || rtm.TrackTrainer.TimeStamp != oldTrackTrainer.TimeStamp {
+			slog.Debug("runTrackTrainerCountdown: nothing to reset, training already completed")
+			return
+		}
+		rtm.TrackTrainer.TimeLeft = rtm.TrackTrainer.TimeLeft - 1
 	}
 	rtm.TrackTrainer = nil
-	slog.Debug("resetTrackTrainer: TrackTrainer reset", "oldTrack", oldTrack.String())
+	slog.Debug("runTrackTrainerCountdown: TrackTrainer reset", "oldTrackTrainer", oldTrackTrainer.String())
 }
 
 func (rtm *RfidTrackManager) SetTrackTrainer(track *Track) bool {
 	if rtm.TrackTrainer != nil {
 		return false
 	}
-	trackTrainer := &TrackTrainer{
-		Track:     track,
-		TimeStamp: time.Now().UnixNano(),
-	}
-	rtm.TrackTrainer = trackTrainer
-	go rtm.resetTrackTrainer(trackTrainer)
+	rtm.TrackTrainer = newTrackTrainer(track)
+	go rtm.runTrackTrainerCountdown(rtm.TrackTrainer)
 	return true
 }

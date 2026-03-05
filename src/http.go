@@ -128,14 +128,19 @@ type WebsocketApiRequest struct {
 	Payload string `json:"payload"`
 }
 
+type RfidTrackTraining struct {
+	Name     string `json:"name"`
+	TimeLeft int64  `json:"time_left"`
+}
+
 type HttpState struct {
-	IsPlaying         bool   `json:"is_playing"`
-	Name              string `json:"name"`
-	Position          int64  `json:"position"`
-	Length            int64  `json:"length"`
-	Duration          int64  `json:"duration"`
-	DurationCurrent   int64  `json:"duration_current"`
-	RfidTrackTraining string `json:"rfid_track_training"`
+	IsPlaying         bool              `json:"is_playing"`
+	Name              string            `json:"name"`
+	Position          int64             `json:"position"`
+	Length            int64             `json:"length"`
+	Duration          int64             `json:"duration"`
+	DurationCurrent   int64             `json:"duration_current"`
+	RfidTrackTraining RfidTrackTraining `json:"rfid_track_training"`
 }
 
 func (p *PlayerHandlerPassthrough) state() *HttpState {
@@ -156,9 +161,10 @@ func (p *PlayerHandlerPassthrough) state() *HttpState {
 	}
 	// TODO: handle directory case
 	// TODO: specify/implement this in more detail
-	rfidTrackTraining := ""
+	rfidTrackTraining := RfidTrackTraining{}
 	if p.rtm.TrackTrainer != nil {
-		rfidTrackTraining = p.rtm.TrackTrainer.Track.Basename()
+		rfidTrackTraining.Name = p.rtm.TrackTrainer.Track.Basename()
+		rfidTrackTraining.TimeLeft = p.rtm.TrackTrainer.TimeLeft
 	}
 
 	return &HttpState{
@@ -218,6 +224,10 @@ func (p *PlayerHandlerPassthrough) handleCommand(req WebsocketApiRequest) {
 			slog.Error("handleCommand rfidtracklearn: TrackTrainer already set", "track", track)
 			return
 		}
+	case "rfidtracklearnstop":
+		// FIXME: this is racy: see state() above
+		// TODO: create mutex in RfidTrackManager/TrackTrainer and access/modify only via mutex-protected functions
+		p.rtm.TrackTrainer = nil
 	default:
 		slog.Error("unknown WebsocketApiRequest type", "type", req.Type)
 	}
