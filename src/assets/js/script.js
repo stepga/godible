@@ -76,10 +76,6 @@ function initializePlayerUI() {
 		is_playing = !is_playing;
 		setToggleIcon();
 	});
-	// TODO: implement me
-	//document.getElementById("alertBoxCloseBtn").addEventListener('click', function() {
-	//        hideAlertBox(true, "");
-	//});
 }
 
 function HHMMSSToSeconds(date) {
@@ -137,11 +133,10 @@ function updateUI(data) {
 		$("#time_current").text(secondsToHHMMSS(json.duration_current));
 		$("#slider").val(json.duration_current);
 	}
+	// TODO: if json.rfid_track_training is not empty string, set alertBox
 
 	is_playing = json.is_playing;
 	setToggleIcon();
-
-	// TODO: set alertBox if json.rfid_track_learn is not empty
 }
 
 function updateRfidButtonsClickEvent() {

@@ -129,13 +129,13 @@ type WebsocketApiRequest struct {
 }
 
 type HttpState struct {
-	IsPlaying       bool   `json:"is_playing"`
-	Name            string `json:"name"`
-	Position        int64  `json:"position"`
-	Length          int64  `json:"length"`
-	Duration        int64  `json:"duration"`
-	DurationCurrent int64  `json:"duration_current"`
-	RfidTrackLearn  string `json:"rfid_track_learn"`
+	IsPlaying         bool   `json:"is_playing"`
+	Name              string `json:"name"`
+	Position          int64  `json:"position"`
+	Length            int64  `json:"length"`
+	Duration          int64  `json:"duration"`
+	DurationCurrent   int64  `json:"duration_current"`
+	RfidTrackTraining string `json:"rfid_track_training"`
 }
 
 func (p *PlayerHandlerPassthrough) state() *HttpState {
@@ -154,19 +154,21 @@ func (p *PlayerHandlerPassthrough) state() *HttpState {
 		tmp = tmp * float64(duration)
 		durationCurrent = int64(tmp)
 	}
-	rfidTrackLearn := ""
-	if p.rfidTrackLearn != nil {
-		rfidTrackLearn = p.rfidTrackLearn.TrackPath
+	// TODO: handle directory case
+	// TODO: specify/implement this in more detail
+	rfidTrackTraining := ""
+	if p.rtm.TrackTrainer != nil {
+		rfidTrackTraining = p.rtm.TrackTrainer.Track.Basename()
 	}
 
 	return &HttpState{
-		IsPlaying:       p.playing,
-		Name:            name,
-		Position:        position,
-		Length:          length,
-		Duration:        duration,
-		DurationCurrent: durationCurrent,
-		RfidTrackLearn:  rfidTrackLearn,
+		IsPlaying:         p.playing,
+		Name:              name,
+		Position:          position,
+		Length:            length,
+		Duration:          duration,
+		DurationCurrent:   durationCurrent,
+		RfidTrackTraining: rfidTrackTraining,
 	}
 }
 
@@ -206,30 +208,16 @@ func (p *PlayerHandlerPassthrough) handleCommand(req WebsocketApiRequest) {
 		track.SetPosition(position)
 		p.Command(TOGGLE)
 	case "rfidtracklearn":
-		// TODO: re-implement me
-		// - if currently not already learning: set the track to learn
-		// - if payload is directory: save directory -> extend the data structs
-		path := req.Payload
-		slog.Debug("XXX: rfidtracklearn", "path", path)
-		rfidTrackLearn := p.NewRfidTrackLearn(path)
-		if rfidTrackLearn == nil {
-			slog.Error("rfidtracklearn: could not find respective track for given payload", "payload", req.Payload)
+		// TODO payload is directory: extend the TrackTrainer struct
+		track := p.findTrack(req.Payload)
+		if track == nil {
+			slog.Error("handleCommand rfidtracklearn: could not find respective track", "payload", req.Payload)
 			return
 		}
-		p.rfidTrackLearn = rfidTrackLearn
-		go func() {
-			// TODO: just introduce a cancelfunc here?
-			slog.Info("rfidTrackLearn: try to reset the player's rfid learn mode")
-			time.Sleep(10 * time.Second)
-
-			if p.rfidTrackLearn == nil {
-				return
-			}
-			if p.rfidTrackLearn.TimeStamp != rfidTrackLearn.TimeStamp {
-				return
-			}
-			p.rfidTrackLearn = nil
-		}()
+		if p.rtm.SetTrackTrainer(track) == false {
+			slog.Error("handleCommand rfidtracklearn: TrackTrainer already set", "track", track)
+			return
+		}
 	default:
 		slog.Error("unknown WebsocketApiRequest type", "type", req.Type)
 	}

@@ -47,10 +47,13 @@ type Player struct {
 	playSignal chan bool
 	// playing represents Player's state of playing or pausing
 	playing bool
+	// TODO remove rfidTrackLearn* and source it out to RfidTrackManager
 	// rfidTrackLearn is being set with a RfidTrackLearn struct pointer.
 	// It is used to register the next read RFID UID to the respective Track.
 	rfidTrackLearn      *RfidTrackLearn
 	rfidTrackLearnBlock bool
+	// maintain a mapping of RFID UIDs and Track
+	rtm *RfidTrackManager
 }
 
 var cancelReasonNext = errors.New("next")
@@ -73,6 +76,7 @@ func NewPlayer() (*Player, error) {
 		TrackList:  trackList,
 		current:    trackList.Front(),
 		playSignal: make(chan bool),
+		rtm:        newRfidTrackManager(),
 	}, nil
 }
 
@@ -95,6 +99,22 @@ func (player *Player) findElementForTrackPath(path string) *list.Element {
 		}
 		if track.Path == path {
 			return element
+		}
+		element = element.Next()
+	}
+	return nil
+}
+
+func (player *Player) findTrack(trackPath string) *Track {
+	element := player.TrackList.Front()
+	for element != nil {
+		track, _ := element.Value.(*Track)
+		if track == nil {
+			slog.Error("findTrack: the Tracklist's element stored an invalid Track (this should not happen)")
+			continue
+		}
+		if track.Path == trackPath {
+			return track
 		}
 		element = element.Next()
 	}
@@ -336,6 +356,11 @@ func (player *Player) RfidUidReceiver(uidpass chan string) {
 		for {
 			slog.Info("RfidUidReceiver: wait for new RFID UID")
 			uid := <-uidpass
+
+			// TODO cases:
+			// - learn a new uid<->track pair: learn
+			// - ignore uid if learning happend the last X seconds (rfidTrackLearnBlock)
+			// - play the respective track to in case of a known uid
 
 			learnTrackPath := player.rfidTrackLearn
 			if learnTrackPath != nil {
