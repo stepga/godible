@@ -144,38 +144,26 @@ type HttpState struct {
 }
 
 func (p *PlayerHandlerPassthrough) state() *HttpState {
+	ret := &HttpState{IsPlaying: p.playing}
 	current := p.getCurrent()
-	if current == nil {
-		return nil
+	if current != nil {
+		ret.Name = current.Basename()
+		ret.Position = current.position
+		ret.Length = current.length
+		ret.Duration = current.duration
+		ret.DurationCurrent = int64(0)
+		if ret.Length > 0 {
+			var tmp float64 = float64(ret.Position) / float64(ret.Length)
+			tmp = tmp * float64(ret.Duration)
+			ret.DurationCurrent = int64(tmp)
+		}
 	}
-
-	name := current.Basename()
-	position := current.position
-	length := current.length
-	duration := current.duration
-	durationCurrent := int64(0)
-	if length > 0 {
-		var tmp float64 = float64(position) / float64(length)
-		tmp = tmp * float64(duration)
-		durationCurrent = int64(tmp)
-	}
-	// TODO: handle directory case
-	// TODO: specify/implement this in more detail
-	rfidTrackTraining := RfidTrackTraining{}
+	// TODO: handle directory case;
 	if p.rtm.TrackTrainer != nil {
-		rfidTrackTraining.Name = p.rtm.TrackTrainer.Track.Basename()
-		rfidTrackTraining.TimeLeft = p.rtm.TrackTrainer.TimeLeft
+		ret.RfidTrackTraining.Name = p.rtm.TrackTrainer.Track.Basename()
+		ret.RfidTrackTraining.TimeLeft = p.rtm.TrackTrainer.TimeLeft
 	}
-
-	return &HttpState{
-		IsPlaying:         p.playing,
-		Name:              name,
-		Position:          position,
-		Length:            length,
-		Duration:          duration,
-		DurationCurrent:   durationCurrent,
-		RfidTrackTraining: rfidTrackTraining,
-	}
+	return ret
 }
 
 func (p *PlayerHandlerPassthrough) handleCommand(req WebsocketApiRequest) {
