@@ -266,22 +266,6 @@ func (p *PlayerHandlerPassthrough) wsWriteState(conn *websocket.Conn) bool {
 	return true
 }
 
-func (p *PlayerHandlerPassthrough) wsWriteHideRfidAlertBox(conn *websocket.Conn) bool {
-	if p.rfidTrackLearn != nil {
-		// nothing to un-show/hide
-		return true
-	}
-	req, _ := json.Marshal(WebsocketApiRequest{
-		Type: "hiderfidalertbox",
-	})
-	err := conn.WriteMessage(websocket.TextMessage, req)
-	if err != nil {
-		slog.Error("writing hiderfidalertbox via websocket connection failed", "req", req, "err", err)
-		return false
-	}
-	return true
-}
-
 func (p *PlayerHandlerPassthrough) wsWriteRows(conn *websocket.Conn) bool {
 	jsonrows, _ := json.Marshal(p.trackListToRows())
 	req, _ := json.Marshal(WebsocketApiRequest{
@@ -310,7 +294,7 @@ func (p *PlayerHandlerPassthrough) wsWriter(conn *websocket.Conn) {
 
 	for range sendTicker.C {
 		conn.SetWriteDeadline(time.Now().Add(writeWait))
-		if !p.wsWriteState(conn) || !p.wsWriteRows(conn) || !p.wsWriteHideRfidAlertBox(conn) {
+		if !p.wsWriteState(conn) || !p.wsWriteRows(conn) {
 			slog.Error("abort (broken?) wsWriter routine due to erros")
 			return
 		}

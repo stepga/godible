@@ -228,9 +228,6 @@ function initializeWebsocket() {
 			case "state":
 				updateUI(data['payload']);
 				break;
-			case "hiderfidalertbox":
-				// TODO: remove me and implement this also in 'state'
-				break;
 			default:
 				console.error("websocket: unknown api request type '" + data['type'] + "'")
 		}
