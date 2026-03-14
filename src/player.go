@@ -22,13 +22,6 @@ const (
 
 const DATADIR = "/perm/godible-data/"
 
-type RfidTrackLearn struct {
-	TrackPath string
-	// TODO: Perhaps just Track?
-	// TODO: timestamp stuff can be deleted
-	TimeStamp int64
-}
-
 type Player struct {
 	// commandMutex is needed to limit the concurrently executed commands
 	// to one command
@@ -47,11 +40,6 @@ type Player struct {
 	playSignal chan bool
 	// playing represents Player's state of playing or pausing
 	playing bool
-	// TODO remove rfidTrackLearn* and source it out to RfidTrackManager
-	// rfidTrackLearn is being set with a RfidTrackLearn struct pointer.
-	// It is used to register the next read RFID UID to the respective Track.
-	rfidTrackLearn      *RfidTrackLearn
-	rfidTrackLearnBlock bool
 	// maintain a mapping of RFID UIDs and Track
 	rtm *RfidTrackManager
 }
@@ -80,24 +68,15 @@ func NewPlayer() (*Player, error) {
 	}, nil
 }
 
-func (player *Player) NewRfidTrackLearn(path string) *RfidTrackLearn {
-	if player.findElementForTrackPath(path) == nil {
-		return nil
-	}
-	return &RfidTrackLearn{
-		TrackPath: path,
-		TimeStamp: time.Now().UnixNano(),
-	}
-}
-
-func (player *Player) findElementForTrackPath(path string) *list.Element {
+func (player *Player) findTrackElement(track *Track) *list.Element {
 	element := player.TrackList.Front()
 	for element != nil {
-		track, _ := element.Value.(*Track)
-		if track == nil {
+		trackIterate, _ := element.Value.(*Track)
+		if trackIterate == nil {
+			slog.Error("findTrackElement: the Tracklist's element stored an invalid Track (this should not happen)")
 			continue
 		}
-		if track.Path == path {
+		if trackIterate == track {
 			return element
 		}
 		element = element.Next()
@@ -133,10 +112,15 @@ func (player *Player) getCurrent() *Track {
 	return track
 }
 
-func (player *Player) setCurrentElement(element *list.Element) {
+func (player *Player) setCurrent(track *Track) {
 	player.currentMutex.Lock()
 	defer player.currentMutex.Unlock()
 
+	element := player.findTrackElement(track)
+	if element == nil {
+		slog.Error("setCurrent: failed to find Tracklist's element for track", "track", track)
+		return
+	}
 	player.current = element
 }
 
@@ -302,112 +286,39 @@ func (player *Player) Command(cmd CommandVal) {
 	}
 }
 
-var rfidUidTrackElementMap map[string]*list.Element
-var trackPathRfidUidMap map[string]string
-
-func (player *Player) GetTrackWithRfidUid(rfidUid string) *list.Element {
-	if el, ok := rfidUidTrackElementMap[rfidUid]; ok {
-		return el
-	}
-	return nil
-}
-
-func (player *Player) GetRfidUidForTrack(track *Track) string {
-	if rfidUid, ok := trackPathRfidUidMap[track.Path]; ok {
-		return rfidUid
-	}
-	return ""
-}
-
-func (player *Player) SetRfidTrack(rfidUid string, trackPath string) bool {
-	trackElement := player.findElementForTrackPath(trackPath)
-	if trackElement == nil {
-		slog.Error("can not find track", "trackPath", trackPath)
-		return false
-	}
-	// remove old/double mappings; 1 RFID UID -> 1 Track
-	rfidUidTrackElementMap[rfidUid] = trackElement
-	for key, val := range rfidUidTrackElementMap {
-		if key == rfidUid {
-			continue
-		}
-		if val == trackElement {
-			delete(rfidUidTrackElementMap, key)
-		}
-	}
-	// remove old/double mappings; 1 Track -> 1 RFID UID
-	trackPathRfidUidMap[trackPath] = rfidUid
-	for key, val := range trackPathRfidUidMap {
-		if key == trackPath {
-			continue
-		}
-		if val == rfidUid {
-			delete(trackPathRfidUidMap, key)
-		}
-	}
-	return true
-}
-
 func (player *Player) RfidUidReceiver(uidpass chan string) {
-	rfidUidTrackElementMap = make(map[string]*list.Element)
-	trackPathRfidUidMap = make(map[string]string)
-
 	go func() {
 		for {
 			slog.Info("RfidUidReceiver: wait for new RFID UID")
 			uid := <-uidpass
 
-			// TODO cases:
-			// - learn a new uid<->track pair: learn
-			// - ignore uid if learning happend the last X seconds (rfidTrackLearnBlock)
-			// - play the respective track to in case of a known uid
-
-			learnTrackPath := player.rfidTrackLearn
-			if learnTrackPath != nil {
-				if player.SetRfidTrack(uid, learnTrackPath.TrackPath) {
-					slog.Info("linked RFID UID to track", "uid", uid, "track", learnTrackPath.TrackPath)
-					player.rfidTrackLearn = nil
-					// prevent the just learnt rfid uid from being read immediately
-					// again and triggering the respective track being played
-					player.rfidTrackLearnBlock = true
-				} else {
-					slog.Error("linking RFID UID to track failed", "uid", uid, "track", learnTrackPath.TrackPath)
-				}
-				go func() {
-					time.Sleep(3 * time.Second)
-					player.rfidTrackLearnBlock = false
-				}()
-
-				// TODO unshow message/alertbox on webgui
+			if player.rtm.SetMapping(uid) == true {
+				slog.Info("linked RFID UID to current TrackTrainer", "uid", uid)
 				continue
 			} else {
 				slog.Debug("no rfid-track-linking to learn")
 			}
 
-			if !player.rfidTrackLearnBlock {
-				slog.Debug("rfid-track-linking is still blocked")
-				continue
-			}
+			// TODO: ignore uid if learning happend the last 3 seconds
 
-			trackElement := player.GetTrackWithRfidUid(uid)
-			if trackElement == nil {
+			track := player.rtm.GetTrack(uid)
+			if track == nil {
 				slog.Error("could not find track for given rfid uid", "uid", uid)
 				continue
 			}
-			if trackElement == player.current {
+			if track == player.getCurrent() {
 				slog.Debug("respective track already playing, do nothing", "uid", uid)
 				continue
 			}
-			track, _ := trackElement.Value.(*Track)
-			slog.Debug("about to play track corresponding to rfid uif", "uid", uid, "track", track.String())
 
+			slog.Debug("about to play track corresponding to rfid uid", "uid", uid, "track", track.String())
 			// pause currently played track; will save the current position
 			if player.playing {
 				player.Command(TOGGLE)
 				time.Sleep(50 * time.Millisecond)
 			}
 			// play the new track
-			player.setCurrentElement(trackElement)
+			player.setCurrent(track)
 			player.Command(TOGGLE)
 		}
 	}()

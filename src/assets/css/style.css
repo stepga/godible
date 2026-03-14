@@ -6,7 +6,7 @@
   --red-light:   #f7cac9;
   --red-medium:  #f7786b;
   --red-dark:    #c94c4c;
-  --green-light: #b1cbbb;
+  --green-light: #b1cbbb; /* TODO: highlight currently played track in green light
 }
 
 /*
@@ -22,13 +22,14 @@
 /* highlight a hovered table row */
 .table-hover tbody tr:hover th,
 .table-hover tbody tr:hover td {
-  background-color: var(--green-light);
+  border-top: calc(var(--bs-border-width) * 2) solid currentcolor;
+  border-bottom: calc(var(--bs-border-width) * 2) solid currentcolor;
 }
 
 /* the action button column should have a small fixed size */
 .table td:nth-child(3) {
-  width: 2em;
-  min-width: 2em;
+  width: 10em;
+  min-width: 10em;
 }
 
 /* introduce a hover-and-click effect for bootstrap buttons */

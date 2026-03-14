@@ -75,15 +75,26 @@ func (rtm *RfidTrackManager) GetUid(track *Track) string {
 	return ""
 }
 
-// TODO also implement directory case
-// Set a new RFID UID Track mapping. An already existing mapping with the
-// given RFID UID will be deleted.
-func (rtm *RfidTrackManager) SetMapping(rfidUid string, track *Track) {
-	existingTrack := rtm.GetTrack(rfidUid)
-	if existingTrack != nil {
-		delete(rtm.UidTrackMap, rfidUid)
+func (rtm *RfidTrackManager) deleteMappings(track *Track, rfidUid string) {
+	for key, value := range rtm.UidTrackMap {
+		if key == rfidUid || track == value.Track {
+			delete(rtm.UidTrackMap, key)
+		}
 	}
+}
+
+// TODO also implement directory case
+// Set a new RFID UID Track mapping, only if a TrackTrainer is
+// also set. Existing mappings with the given RFID UID or track will be deleted.
+func (rtm *RfidTrackManager) SetMapping(rfidUid string) bool {
+	if rtm.TrackTrainer == nil {
+		return false
+	}
+	track := rtm.TrackTrainer.Track
+	rtm.deleteMappings(track, rfidUid)
 	rtm.UidTrackMap[rfidUid] = &TrackMapping{Track: track, Directory: ""}
+	rtm.TrackTrainer = nil
+	return true
 }
 
 func (rtm *RfidTrackManager) runTrackTrainerCountdown(oldTrackTrainer *TrackTrainer) {

@@ -67,7 +67,7 @@ func (p *PlayerHandlerPassthrough) trackToRow(track *Track) Row {
 		DirnameFull:     track.DirnameFull(),
 		CurrentSeconds:  track.CurrentSeconds(),
 		DurationSeconds: track.duration,
-		RfidUid:         p.GetRfidUidForTrack(track),
+		RfidUid:         p.rtm.GetUid(track),
 	}
 	err := row.setHashSum()
 	if err != nil {

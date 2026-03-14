@@ -19,7 +19,7 @@ const (
 	resetPin             = "P1_22" // GPIO 25
 	irqPinName           = "P1_12" // GPIO 18
 	uidWaitDuration      = 5 * time.Second
-	readUIDSenderMaxFail = 10
+	readUIDSenderMaxFail = 20
 )
 
 type RfidDevice struct {
